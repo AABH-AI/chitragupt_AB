@@ -76,12 +76,13 @@ Product teams should use these specific queries during stakeholder interviews to
 **A1. Taxonomy:** When your team writes a specification today, what are the absolute mandatory fields? (e.g., ID, Priority, Description, Acceptance Criteria, Source, Affected Actor)
 
 **A2. Definition of Done:** What makes a requirement "complete"? Which of these are mandatory for every requirement?
-  - At least one positive acceptance criterion
-  - At least one negative acceptance criterion
-  - Edge case scenario
-  - Priority (MoSCoW)
-  - Source citation
-  - Performance target (for NFRs)
+
+- At least one positive acceptance criterion
+- At least one negative acceptance criterion
+- Edge case scenario
+- Priority (MoSCoW)
+- Source citation
+- Performance target (for NFRs)
 
 **A3. Data Hierarchy:** Do requirements map one-to-one to Epics? Or can one requirement spawn multiple User Stories? Do you use a standard hierarchy (Theme → Epic → Story → Task)?
 
@@ -96,25 +97,28 @@ Product teams should use these specific queries during stakeholder interviews to
 > *Goal: Understand what the Ingestion Agent must support on Day 1.*
 
 **B1. Format Prioritization:** If you could only support 3 input formats for the MVP, what are they? Please rank in order of business impact:
-  - PDF documents
-  - DOCX files
-  - Free-text chat (elicitation)
-  - Jira epic/issue links
-  - Confluence page URLs
-  - Excel/spreadsheet requirement matrices
-  - Notion pages
-  - Plain text
+
+- PDF documents
+- DOCX files
+- Free-text chat (elicitation)
+- Jira epic/issue links
+- Confluence page URLs
+- Excel/spreadsheet requirement matrices
+- Notion pages
+- Plain text
 
 **B2. Volume:** What is the average size of a requirements dump?
-  - Small: 1–10 pages / 1–3 documents
-  - Medium: 10–50 pages / 3–10 documents
-  - Large: 50–200 pages / 10–30 documents
-  - XL: 200+ pages / 30+ documents
+
+- Small: 1–10 pages / 1–3 documents
+- Medium: 10–50 pages / 3–10 documents
+- Large: 50–200 pages / 10–30 documents
+- XL: 200+ pages / 30+ documents
 
 **B3. Staleness:** If a Confluence page changes *after* it has been ingested, should the system:
-  - Automatically detect the change and re-ingest?
-  - Notify the BA and wait for manual re-ingest?
-  - Ignore it (BA is responsible for re-uploading)?
+
+- Automatically detect the change and re-ingest?
+- Notify the BA and wait for manual re-ingest?
+- Ignore it (BA is responsible for re-uploading)?
 
 **B4. Multimedia:** Will the system be required to extract requirements from diagrams, images, or audio recordings in Phase 1?
 
@@ -127,29 +131,34 @@ Product teams should use these specific queries during stakeholder interviews to
 > *Goal: Define the guardrails for the LLM and the human review workflow.*
 
 **C1. Confidence Thresholds:** If the AI is only 70% confident in a synthesized requirement, should it:
-  - Include it with an `[INFERRED]` tag and surface it as a flagged item?
-  - Omit it entirely and raise it as an Open Question for the user to clarify?
-  - Ask the user a targeted clarifying question in the chat before including it?
+
+- Include it with an `[INFERRED]` tag and surface it as a flagged item?
+- Omit it entirely and raise it as an Open Question for the user to clarify?
+- Ask the user a targeted clarifying question in the chat before including it?
 
 **C2. Elicitation Style:** How proactive should the Elicitation Agent be?
-  - Ask all gap questions in a numbered list at once
-  - Ask one question at a time, sequentially
-  - Only ask questions for gaps that affect "must have" requirements
+
+- Ask all gap questions in a numbered list at once
+- Ask one question at a time, sequentially
+- Only ask questions for gaps that affect "must have" requirements
 
 **C3. Output Delivery:** How do you want the final document delivered?
-  - Live preview that streams as it generates
-  - Single generation then display (user waits for complete output)
-  - Background job with email notification when ready
+
+- Live preview that streams as it generates
+- Single generation then display (user waits for complete output)
+- Background job with email notification when ready
 
 **C4. Review Workflow:** Who reviews the AI-generated spec, and in what sequence?
-  - BA reviews first → PM approves → client receives clean version
-  - BA reviews → client reviews and comments → BA finalizes
-  - Single-reviewer (BA is the only reviewer and approver)
+
+- BA reviews first → PM approves → client receives clean version
+- BA reviews → client reviews and comments → BA finalizes
+- Single-reviewer (BA is the only reviewer and approver)
 
 **C5. Conflict Resolution:** When two sources contradict each other, how should the UI present this?
-  - Side-by-side view of the two conflicting excerpts with resolution options
-  - Simple alert with links to both sources
-  - Email/Slack notification asking for resolution
+
+- Side-by-side view of the two conflicting excerpts with resolution options
+- Simple alert with links to both sources
+- Email/Slack notification asking for resolution
 
 ---
 
@@ -158,30 +167,35 @@ Product teams should use these specific queries during stakeholder interviews to
 > *Goal: Establish technology constraints and preferences before architecture decisions are made.*
 
 **D1. LLM Provider Requirement:** Does the organization have a contract, preference, or compliance requirement for a specific LLM provider?
-  - Existing Azure OpenAI Service subscription (enterprise agreement)
-  - Preference for Anthropic Claude
-  - Must use open-source / self-hosted models (Llama 3) due to data classification
-  - No preference — evaluate on quality and cost
+
+- Existing Azure OpenAI Service subscription (enterprise agreement)
+- Preference for Anthropic Claude
+- Must use open-source / self-hosted models (Llama 3) due to data classification
+- No preference — evaluate on quality and cost
 
 **D2. Deployment Model:** Where must the system run?
-  - Chitragupt-managed SaaS (data leaves the organization's network)
-  - Customer-hosted (Chitragupt stack deployed in our cloud account)
-  - On-premise / air-gapped (no external API calls permitted)
+
+- Chitragupt-managed SaaS (data leaves the organization's network)
+- Customer-hosted (Chitragupt stack deployed in our cloud account)
+- On-premise / air-gapped (no external API calls permitted)
 
 **D3. Vector Store Preference:** Does the team have a preference or constraint on the vector database?
-  - Pinecone (SaaS, managed, simplest to start)
-  - Qdrant (self-hosted or managed, high performance)
-  - pgvector (PostgreSQL extension, already in use)
-  - No preference
+
+- Pinecone (SaaS, managed, simplest to start)
+- Qdrant (self-hosted or managed, high performance)
+- pgvector (PostgreSQL extension, already in use)
+- No preference
 
 **D4. Existing Data Infrastructure:** What databases and data platform tools does the engineering team already operate?
-  - This informs whether pgvector (reuse existing PostgreSQL) is preferred over a separate vector store.
+
+- This informs whether pgvector (reuse existing PostgreSQL) is preferred over a separate vector store.
 
 **D5. Agentic Framework:** Does the engineering team have a preference or existing expertise in an agentic framework?
-  - LangGraph (Python, stateful, recommended)
-  - CrewAI
-  - Custom state machine
-  - No preference
+
+- LangGraph (Python, stateful, recommended)
+- CrewAI
+- Custom state machine
+- No preference
 
 ---
 
@@ -190,21 +204,24 @@ Product teams should use these specific queries during stakeholder interviews to
 > *Goal: Establish cost constraints that will drive architecture decisions on model selection, caching, and processing mode.*
 
 **E1. Per-Project Cost Tolerance:** What is the maximum acceptable LLM API cost per requirements analysis run?
-  - Under $1 (requires aggressive caching and model tier optimization)
-  - $1–$5 (allows quality-tier models with caching)
-  - $5–$20 (allows premium-tier for complex conflict resolution)
-  - Not constrained — prioritize quality
+
+- Under $1 (requires aggressive caching and model tier optimization)
+- $1–$5 (allows quality-tier models with caching)
+- $5–$20 (allows premium-tier for complex conflict resolution)
+- Not constrained — prioritize quality
 
 **E2. Monthly Infrastructure Budget:** What is the total monthly infrastructure budget?
-  - Under $500 (managed services, shared infrastructure)
-  - $500–$2,000 (dedicated instances, managed vector store)
-  - $2,000–$10,000 (multi-AZ, high availability)
-  - Over $10,000 (enterprise scale)
+
+- Under $500 (managed services, shared infrastructure)
+- $500–$2,000 (dedicated instances, managed vector store)
+- $2,000–$10,000 (multi-AZ, high availability)
+- Over $10,000 (enterprise scale)
 
 **E3. Budget Alerting:** Who should receive alerts when cost thresholds are reached?
-  - Project owner at 80% of project budget cap
-  - Workspace admin at 80% of monthly cap
-  - Finance/Ops team at 100% of monthly cap
+
+- Project owner at 80% of project budget cap
+- Workspace admin at 80% of monthly cap
+- Finance/Ops team at 100% of monthly cap
 
 **E4. Open-Source vs. Managed Services:** Is there a preference for open-source tooling to reduce vendor license costs (e.g., Qdrant self-hosted vs. Pinecone managed)?
 
@@ -215,27 +232,31 @@ Product teams should use these specific queries during stakeholder interviews to
 > *Goal: Surface blockers that require compliance certifications or data residency constraints before the system can be sold to specific customer segments.*
 
 **F1. Data Classification:** At what level are client requirement documents classified?
-  - General / Public (no restrictions)
-  - Confidential / Internal (standard encryption; no external sharing)
-  - Restricted / Sensitive (SOC 2 required; DPA needed)
-  - Highly Restricted / Regulated (HIPAA / FedRAMP required)
+
+- General / Public (no restrictions)
+- Confidential / Internal (standard encryption; no external sharing)
+- Restricted / Sensitive (SOC 2 required; DPA needed)
+- Highly Restricted / Regulated (HIPAA / FedRAMP required)
 
 **F2. Geographic Residency:** Are any clients in the EU or subject to GDPR?
-  - If yes, EU-region infrastructure and a DPA are mandatory before ingesting their data.
+
+- If yes, EU-region infrastructure and a DPA are mandatory before ingesting their data.
 
 **F3. SSO Requirement:** Is SSO required for enterprise customers?
-  - SAML 2.0
-  - OIDC (Google, Microsoft, Okta)
-  - Both
-  - Not required for Phase 1
+
+- SAML 2.0
+- OIDC (Google, Microsoft, Okta)
+- Both
+- Not required for Phase 1
 
 **F4. Audit & Compliance Reporting:** Is a downloadable audit trail report required for SOC 2 or ISO 27001 evidence?
 
 **F5. Retention Policy:** How long must requirement documents and generated specifications be retained?
-  - 30 days
-  - 90 days (default)
-  - 1 year
-  - 7 years (regulated / legal archiving)
+
+- 30 days
+- 90 days (default)
+- 1 year
+- 7 years (regulated / legal archiving)
 
 ---
 
@@ -310,6 +331,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Finalize all technology selections, data models, and system invariants. No production code — spikes and decisions only.
 
 **Key Deliverables:**
+
 - Technology Evaluation Matrix completed and signed off.
 - Database schema for all entities (see `ontology.md` for full schema).
 - Vector store namespace strategy and metadata schema documented.
@@ -328,6 +350,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Build the pipeline that turns files into searchable, traceable knowledge. No LLM synthesis yet.
 
 **Key Deliverables:**
+
 - Document Parser: PDF, TXT, DOCX.
 - Semantic chunker (target: 300–600 tokens, 15% overlap).
 - Embedding generation pipeline (selected embedding model).
@@ -351,6 +374,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Introduce the LLM to reason over retrieved chunks and generate a requirements draft.
 
 **Key Deliverables:**
+
 - LLM model router (fast / quality / premium tiers) with fallback chain.
 - Prompt caching implementation for agent system prompts.
 - Synthesis Agent: retrieves chunks → drafts requirements with confidence scores.
@@ -373,6 +397,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Assemble the final specification document and implement the human review cycle.
 
 **Key Deliverables:**
+
 - Specification Writer Agent: assembles requirements into structured document using domain template.
 - Domain template library (at least 1 general template; 1 domain-specific template).
 - Spec preview UI: collapsible sections, confidence badges, citation viewer.
@@ -397,6 +422,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Connect the system to the tools where requirements already live, and expand export options.
 
 **Key Deliverables:**
+
 - Jira read integration: OAuth flow, epic/issue ingestion, pagination handling.
 - Confluence read integration: OAuth flow, page URL ingestion, HTML-to-text normalization.
 - Linear read integration: GraphQL API, issue/project ingestion.
@@ -416,6 +442,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Harden the system for production security, compliance readiness, and multi-tenant scale.
 
 **Key Deliverables:**
+
 - PostgreSQL Row-Level Security (RLS) enabled for all tenant-scoped tables.
 - Penetration test (OWASP Top 10 scope) — commission external party.
 - Prompt injection containment (INV-SEC-05) — validation and automated test suite.
@@ -438,6 +465,7 @@ Before Sprint 1 begins, the team must agree on the Minimum Viable Product defini
 **Objective:** Optimize system performance, establish production observability, and validate against acceptance criteria before General Availability.
 
 **Key Deliverables:**
+
 - Langfuse (or LangSmith) integration for full LLM trace capture: agent name, model, tokens, latency, cost, cache hit.
 - Retrieval precision@5 measurement dashboard — ongoing evaluation against ground truth.
 - Semantic cache implementation: reduce redundant retrievals for repeated queries.
