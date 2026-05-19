@@ -1,9 +1,0 @@
-We want to build a business requiremnt analyzer. the analyzer is going to intake user / client requiremnts from muultiple sources and chat based intent, then it is going to process the input through a RAG based agentic system and the output should be a specifications document. we want to begin with research so that the product team can pick up and build the initial user story or epic. Create a research document for this project outlining the scope, problem statement or space and a use case for RAG based agentic workflow
-
-chitragupt is a RAG based agentic business Requirement analyzer. Based on the docs in /docs create a BRA Research Doc for our product team with a mermaid style diagram(s) in .md once done delete the *.docx file
-
-add a README and do the following - init git, add a .gitignore, add files, create a first commit, add a remote - https://github.com/bc0de0/chitragupt.git and then push to remote
-
-we want to start the discovery phase of product planning - create a scoped, queries and requirements doc forr product teams to work with stakeholders to be able to define the sprints - the sprints should address firrst principles (ontology, invarients etc) first
-
-We are going to create the following docs as part of the discovery phase - 1 epistemology 2 ontology 3 invarients and 4 unknown and stakeholder input requirement & query doc
