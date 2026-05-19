@@ -889,4 +889,67 @@ We require an inline **Thumbs Up / Thumbs Down** feedback button directly next t
 
 ---
 
+## 11. Key Dependencies & Assumptions
+
+### 11.1 Upstream LLM Uptime & Schema Stability [BLOCKING]
+
+**Question:** How will the system mitigate breaking changes in upstream LLM provider API schemas, deprecation cycles, or sudden model rate limit exhaustions?
+
+- Sub-question A: What is our fallback policy if Anthropic Claude experiences a regional service outage?
+- Sub-question B: How do we prevent upstream API payload updates from breaking our multi-agent LangGraph schema?
+
+**Why it matters:** A sudden breaking change in a third-party LLM's API response schema or a regional service outage can immediately crash our multi-agent orchestration, resulting in hanging jobs and broken progress indicators.
+
+**Client Response & Decision:**
+
+- **Fallback Policy (Sub-question A):** We mandate the implementation of an automated model fallback chain in Sprints 0-1. Anthropic Claude remains our primary reasoning model, but the orchestration layer must automatically detect 5xx server errors or rate limit codes (429) and route the active LangGraph node execution to Google Gemini 1.5 Pro within the same execution context.
+- **Model Version Pinning (Sub-question B):** In strict accordance with **INV-MODEL-03**, floating aliases (e.g., `claude-3-5-sonnet-latest`) are absolutely prohibited in production code. The system must use explicitly pinned API model identifiers (e.g., `claude-3-5-sonnet-20241022`). Any upstream model migration must first run through our automated CI/CD evaluation dataset to verify semantic consistency before promotion.
+
+---
+
+### 11.2 Ingested Document Semantics & Relevance [SPRINT 2+]
+
+**Question:** Does the system assume that all uploaded files are valid requirement baselines, or will it guard against irrelevant uploads (e.g., invoices, marketing slide decks, vacation plans)?
+
+**Why it matters:** Ingesting irrelevant files pollutes our vector namespace, drives up RAG token costs, causes high recall of semantic noise, and violates our Epistemic Traceability Invariant (INV-EPI-01) by linking stories to non-functional noise.
+
+**Client Response & Decision:**
+
+The ingestion pipeline must implement a **Pre-Ingestion Classification Scan** at the start of Sprint 1.
+
+- *Execution Flow:* Prior to executing the semantic chunker and embedding pipeline, a fast-tier model (e.g., Claude Haiku or GPT-4o-mini) must scan the first 1,500 tokens of the document.
+- *Outcome:* If the model classifies the document as irrelevant to software requirements, system architectures, or business processes, the upload is halted. The UI displays an alert: *"Upload Stopped: Source Document does not appear to contain requirements content."* This protects pgvector database hygiene and keeps our API costs optimized.
+
+---
+
+### 11.3 Vector Store Co-location & Scaling Thresholds [SPRINT 2+]
+
+**Question:** Is it assumed that pgvector will remain co-located on our primary RDS database indefinitely, and what metric triggers a migration to a dedicated vector store?
+
+**Why it matters:** High-dimensional vector searches (1536 dimensions) are CPU-intensive. If concurrent user volumes scale rapidly, sharing a single RDS database for both transactional queries (billing, auth, user management) and vector similarity searches will lead to query timeouts and UI freezing.
+
+**Client Response & Decision:**
+
+We assume that for Sprints 0–4, co-locating pgvector in our primary AWS RDS PostgreSQL instance is extremely cost-effective and sufficient.
+
+- *Performance SLA:* SAs must track the retrieval latency of the semantic search API. If the P95 latency of similarity retrieval searches crosses **2.5 seconds**, or if RDS CPU utilization consistently crosses **80%** under peak concurrent project generation loads (5-10 runs), the team must trigger a scheduled migration to a dedicated, high-performance vector store (e.g., managed Qdrant) in Sprint 6. The DB repository layer must use a clean repository interface pattern in Sprint 0 to make this transition seamless.
+
+---
+
+### 11.4 Asynchronous Pipeline State & Execution Lockouts [BLOCKING]
+
+**Question:** Does the system assume a project workspace is locked or frozen while a BA reviews a draft, or can elicitation and synthesis continue in parallel?
+
+**Why it matters:** If BAs are locked out of adding documents or running chats while a previous requirement draft is pending review, it creates massive scheduling deadlocks and destroys BA productivity.
+
+**Client Response & Decision:**
+
+We assume the review pipeline is **fully asynchronous and non-blocking**.
+
+- *Workspace States:* BAs must be able to upload new source documents, run elicitation chats, and trigger incremental requirement drafts even if there are active requirements marked as `Draft` or `Pending Conflict Resolution`.
+- *Human Override Invariant (INV-HITL-01):* Any requirements that have been explicitly modified or approved (`BA Approved` status) are completely locked. Subsequent agentic synthesis runs can only modify, merge, or create requirements that are in a `Draft` or `Inferred` status, ensuring BAs never lose their manual review work.
+
+---
+
 > End of Document • Chitragupt Unknowns & Stakeholder Queries • v2.0 • May 2026
+
