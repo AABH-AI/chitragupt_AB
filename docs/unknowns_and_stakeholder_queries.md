@@ -875,6 +875,7 @@ We require a robust **Self-serve onboarding** experience.
 ### 10.4 Feedback Mechanism for AI Output Quality [SPRINT 2+]
 
 **Question:** How should users provide feedback when the AI makes a mistake that they want to report (beyond just editing it)?
+
 - Thumbs up / thumbs down on individual requirements (lightweight, anonymized)
 - Detailed feedback form: what was wrong, what was expected
 - No in-product feedback channel; collect feedback via CS team
@@ -952,4 +953,3 @@ We assume the review pipeline is **fully asynchronous and non-blocking**.
 ---
 
 > End of Document • Chitragupt Unknowns & Stakeholder Queries • v2.0 • May 2026
-
