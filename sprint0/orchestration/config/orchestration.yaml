@@ -1,0 +1,412 @@
+# Orchestration Connector Configuration
+# Version: 1.0
+#
+# This file is the single source of truth for which orchestration backend
+# is used and under what conditions. All connector selection logic reads
+# from here — no connector choices live in application code.
+#
+# SELECTION MODES
+# ---------------
+# compile_time : Connector resolved once at application startup from the
+#                ORCHESTRATION_BACKEND environment variable. Immutable for
+#                the lifetime of the process. Fastest; no per-request cost.
+#
+# runtime      : Connector resolved per workspace/project from workspace
+#                configuration and constraint evaluation. Allows different
+#                clients to use different backends on the same deployment.
+#
+# HOW ROUTING RULES WORK
+# ----------------------
+# Rules are evaluated in ascending priority order (lower number = higher priority).
+# First matching rule wins and narrows the candidate set.
+# Hard-filter rules eliminate non-compliant connectors entirely.
+# Soft-preference rules reorder the candidate list but do not eliminate.
+# If evaluation leaves zero candidates, the system raises a
+# OrchestrationConfigurationError and refuses to start.
+
+version: "1.0"
+
+orchestration:
+
+  selection_mode: runtime          # compile_time | runtime
+  fallback_connector: langgraph    # used if runtime evaluation produces no winner
+  allow_runtime_override: false    # true only in development — allows ad-hoc connector swap without restart
+
+  # ---------------------------------------------------------------------------
+  # CONNECTOR REGISTRY
+  # Each entry declares the framework, its capabilities, cost profile,
+  # security posture, and trade-offs. This is the evaluation input for the
+  # ConstraintBasedSelector. Do not hardcode these properties in Python code.
+  # ---------------------------------------------------------------------------
+  connectors:
+
+    langgraph:
+      display_name: "LangGraph (LangChain Inc.)"
+      package: langgraph
+      min_version: "0.2.0"
+      enabled: true
+      license: MIT
+      homepage: "https://github.com/langchain-ai/langgraph"
+      docs: "https://langchain-ai.github.io/langgraph/"
+
+      capabilities:
+        hitl_interrupts: true       # native interrupt/resume on any node edge
+        streaming: true             # token-by-token via astream_events
+        state_persistence: true     # via checkpointer (Postgres, Redis, memory)
+        parallel_execution: true    # fan-out/fan-in graph branches
+        explicit_graph: true        # directed graph — satisfies INV-PERF-01
+        self_hostable: true         # no external service required; runs in-process
+        multi_agent: true           # multi-agent supervisor graphs supported
+        zero_data_retention: true   # no data leaves if self-hosted
+
+      cost_profile:
+        license_cost_usd_monthly: 0
+        infrastructure_overhead: low      # lightweight; in-process
+        token_overhead_multiplier: 1.0    # no extra tokens beyond direct LLM calls
+        notes: "No per-call cost; framework cost is zero. All cost comes from LLM provider."
+
+      security_profile:
+        data_residency_compatible: true   # fully self-hosted; data never leaves infra
+        self_hostable: true
+        compliance: [gdpr, hipaa, soc2]   # achievable when self-hosted
+
+      tradeoffs:
+        strengths:
+          - "Explicit inspectable state machine satisfies INV-PERF-01 (deterministic retrieval)"
+          - "Native HITL interrupt/resume satisfies INV-HITL-01 through INV-HITL-04"
+          - "Stateless node model satisfies INV-PERF-02 (all state in graph state object)"
+          - "Self-hostable satisfies on-premise and strict data residency requirements"
+          - "Checkpointer integrates directly with Postgres (same DB as relational store)"
+        weaknesses:
+          - "Steeper learning curve than CrewAI for role-based agent patterns"
+          - "Python-primary; TypeScript support is secondary"
+
+    # --------------------------------------------------------------------------
+    langchain:
+      display_name: "LangChain (LangChain Inc.)"
+      package: langchain-core
+      min_version: "0.2.0"
+      enabled: true
+      license: MIT
+      homepage: "https://github.com/langchain-ai/langchain"
+      docs: "https://python.langchain.com/docs/"
+
+      capabilities:
+        hitl_interrupts: false      # requires LangGraph; plain chains have no HITL
+        streaming: true             # via astream
+        state_persistence: false    # stateless chains; no built-in checkpointer
+        parallel_execution: false   # limited; RunnableParallel is synchronous
+        explicit_graph: false       # chains are implicit sequences, not graphs
+        self_hostable: true
+        multi_agent: false          # requires LangGraph for multi-agent
+        zero_data_retention: true
+
+      cost_profile:
+        license_cost_usd_monthly: 0
+        infrastructure_overhead: low
+        token_overhead_multiplier: 1.05   # slight overhead from chain abstraction layer
+        notes: "Minor prompt inflation from chain wrappers."
+
+      security_profile:
+        data_residency_compatible: true
+        self_hostable: true
+        compliance: [gdpr, soc2]
+
+      tradeoffs:
+        strengths:
+          - "Largest integration ecosystem (200+ integrations)"
+          - "Well-documented with extensive community examples"
+          - "Excellent document loader and text splitter utilities"
+        weaknesses:
+          - "No native HITL — violates INV-HITL-01 without adding LangGraph on top"
+          - "No explicit state graph — weaker INV-PERF-01 compliance"
+          - "Recommended only as a utility layer (loaders, splitters), not as orchestrator"
+
+    # --------------------------------------------------------------------------
+    crewai:
+      display_name: "CrewAI"
+      package: crewai
+      min_version: "0.40.0"
+      enabled: true
+      license: MIT (OSS) / Commercial (Enterprise tier)
+      homepage: "https://github.com/crewAIInc/crewAI"
+      docs: "https://docs.crewai.com/"
+
+      capabilities:
+        hitl_interrupts: true       # via human_input=True on Agent; limited compared to LangGraph
+        streaming: false            # limited streaming support
+        state_persistence: false    # no built-in checkpointer
+        parallel_execution: true    # async crew execution
+        explicit_graph: false       # role-based abstraction; graph is hidden
+        self_hostable: true
+        multi_agent: true           # core design pattern
+        zero_data_retention: true
+
+      cost_profile:
+        license_cost_usd_monthly: 0           # OSS tier
+        infrastructure_overhead: medium
+        token_overhead_multiplier: 1.15       # role/crew system adds prompt overhead per agent
+        notes: "Enterprise tier has commercial licensing cost. OSS tier is free."
+
+      security_profile:
+        data_residency_compatible: true
+        self_hostable: true
+        compliance: [gdpr, soc2]
+
+      tradeoffs:
+        strengths:
+          - "Intuitive role-based agent model — lower onboarding cost"
+          - "Good for task-delegation patterns between specialized agents"
+        weaknesses:
+          - "Graph is implicit/hidden — weaker INV-PERF-01 compliance vs LangGraph"
+          - "Token overhead from role and crew prompt scaffolding"
+          - "Not production-hardened for multi-tenant SaaS at scale"
+          - "HITL implementation less robust than LangGraph interrupts"
+
+    # --------------------------------------------------------------------------
+    together_ai:
+      display_name: "Together AI SDK"
+      package: together
+      min_version: "1.0.0"
+      enabled: true
+      license: Proprietary (API service)
+      homepage: "https://www.together.ai/"
+      docs: "https://docs.together.ai/"
+
+      capabilities:
+        hitl_interrupts: false      # no interrupt mechanism; API-call only
+        streaming: true             # SSE streaming supported
+        state_persistence: false    # no state management; stateless API calls
+        parallel_execution: true    # parallel API requests
+        explicit_graph: false       # no graph abstraction
+        self_hostable: false        # API-only; model weights not available for all models
+        multi_agent: false          # manual; no agent framework
+        zero_data_retention: false  # data handled per Together AI's terms of service
+
+      cost_profile:
+        license_cost_usd_monthly: 0
+        infrastructure_overhead: none       # fully managed API; no infra cost
+        token_overhead_multiplier: 0.9      # competitive pricing vs frontier APIs
+        notes: >
+          Cost-competitive access to open-source models (Llama, Mistral, Qwen, etc.).
+          No per-token cost for framework overhead. All cost is model inference.
+
+      security_profile:
+        data_residency_compatible: false    # US-hosted API; cannot guarantee residency
+        self_hostable: false
+        compliance: []                      # limited enterprise compliance posture
+
+      tradeoffs:
+        strengths:
+          - "Cost-competitive access to open-source models"
+          - "Simple SDK with low integration overhead"
+          - "Good for budget-constrained non-enterprise deployments"
+        weaknesses:
+          - "Not self-hostable — fails EU/on-premise data residency requirements"
+          - "No HITL support — violates INV-HITL-01 for approval workflows"
+          - "No explicit graph — violates INV-PERF-01 in production"
+          - "Limited compliance posture for regulated industries"
+          - "Acceptable only for: development, prototyping, or non-regulated starter-plan clients in US"
+
+    # --------------------------------------------------------------------------
+    anthropic_sdk:
+      display_name: "Anthropic SDK (Direct)"
+      package: anthropic
+      min_version: "0.34.0"
+      enabled: true
+      license: Proprietary (API service)
+      homepage: "https://www.anthropic.com/"
+      docs: "https://docs.anthropic.com/"
+
+      capabilities:
+        hitl_interrupts: false      # manual implementation required around SDK calls
+        streaming: true             # native streaming via stream context manager
+        state_persistence: false    # no state management; stateless API
+        parallel_execution: true    # parallel API calls
+        explicit_graph: false       # no orchestration layer
+        self_hostable: false        # API-only (regional via AWS Bedrock or GCP Vertex)
+        multi_agent: false          # manual
+        zero_data_retention: true   # via enterprise zero-retention endpoint header
+
+      cost_profile:
+        license_cost_usd_monthly: 0
+        infrastructure_overhead: none
+        token_overhead_multiplier: 1.0    # zero framework overhead
+        notes: >
+          Prompt caching reduces effective cost by 70-90% on repeated system prompts.
+          Use anthropic-beta: zero-data-retention header on all calls.
+
+      security_profile:
+        data_residency_compatible: true   # via AWS Bedrock (us-east-1, eu-west-1) or GCP Vertex
+        self_hostable: false
+        compliance: [gdpr, hipaa, soc2]   # achievable via enterprise tier + regional endpoint
+
+      tradeoffs:
+        strengths:
+          - "Zero framework overhead — every token goes to the model"
+          - "Zero data retention via enterprise endpoint"
+          - "Native prompt caching (60-90% cost reduction on system prompts)"
+          - "Regional deployment via Bedrock/Vertex satisfies data residency"
+        weaknesses:
+          - "No orchestration — all graph and state logic must be hand-built"
+          - "No HITL framework — INV-HITL-01 requires custom interrupt scaffolding"
+          - "Recommended only as the LLM client within a LangGraph connector, not as orchestrator"
+
+    # --------------------------------------------------------------------------
+    transformers:
+      display_name: "HuggingFace Transformers (Self-hosted)"
+      package: transformers
+      min_version: "4.40.0"
+      enabled: false        # DISABLED by default — requires GPU infrastructure decision first
+      license: Apache 2.0
+      homepage: "https://github.com/huggingface/transformers"
+      docs: "https://huggingface.co/docs/transformers/"
+
+      capabilities:
+        hitl_interrupts: false      # manual; no framework support
+        streaming: true             # via TextIteratorStreamer
+        state_persistence: false    # manual
+        parallel_execution: true    # batched inference
+        explicit_graph: false
+        self_hostable: true         # model weights downloadable; fully on-premise
+        multi_agent: false          # manual
+        zero_data_retention: true   # fully self-hosted; no external call
+
+      cost_profile:
+        license_cost_usd_monthly: 0
+        infrastructure_overhead: very_high    # GPU instances required (A100/H100 class)
+        token_overhead_multiplier: 0.0        # no per-token API cost; infra cost only
+        notes: >
+          Zero marginal token cost at scale. High fixed infra cost.
+          Break-even vs API pricing typically at >10M tokens/month.
+          Requires GPU cluster provisioning, model serving infrastructure (vLLM, TGI),
+          and ongoing ops. Enable only when on-premise or GPU-scale requirements are confirmed.
+
+      security_profile:
+        data_residency_compatible: true   # fully on-premise; air-gapped deployments possible
+        self_hostable: true
+        compliance: [gdpr, hipaa, soc2]   # fully achievable on-premise
+
+      tradeoffs:
+        strengths:
+          - "Full data sovereignty — air-gapped deployment possible"
+          - "No per-token cost at scale (break-even ~10M tokens/month)"
+          - "Supports strict HIPAA and classified data environments"
+        weaknesses:
+          - "Very high infrastructure cost and ops burden"
+          - "Model quality typically below frontier API models (GPT-4, Claude 3.5+)"
+          - "Requires GPU cluster management, model serving stack (vLLM/TGI), and MLOps"
+          - "Enable only when client data sovereignty requirements explicitly demand it"
+
+  # ---------------------------------------------------------------------------
+  # ROUTING RULES
+  # Evaluated in ascending priority order (1 = highest priority).
+  # First matching rule determines the preferred connector set.
+  # action.require_capability eliminates connectors lacking that capability (hard filter).
+  # action.preferred_connectors reorders the candidate list (soft preference).
+  # action.use_connector forces a specific connector (override).
+  # ---------------------------------------------------------------------------
+  routing_rules:
+
+    - id: rule_on_premise
+      priority: 1
+      description: "On-premise deployments must use self-hostable connectors. Hard filter."
+      condition:
+        data_residency: on_premise
+      action:
+        type: hard_filter
+        require_capability: self_hostable
+        preferred_connectors: [langgraph, transformers]
+
+    - id: rule_strict_data_residency
+      priority: 2
+      description: "EU and APAC residency requires connectors whose data never leaves the region."
+      condition:
+        data_residency: [eu, apac]
+      action:
+        type: hard_filter
+        require_capability: self_hostable
+        preferred_connectors: [langgraph]
+
+    - id: rule_hipaa
+      priority: 3
+      description: "HIPAA-scoped workspaces must use self-hostable connectors. Hard filter."
+      condition:
+        compliance_flags_contains: HIPAA
+      action:
+        type: hard_filter
+        require_capability: self_hostable
+        preferred_connectors: [langgraph, transformers]
+
+    - id: rule_hitl_required
+      priority: 4
+      description: "Any workspace using approval or review workflows requires native HITL support."
+      condition:
+        feature_required: hitl_interrupts
+      action:
+        type: hard_filter
+        require_capability: hitl_interrupts
+        preferred_connectors: [langgraph, crewai]
+
+    - id: rule_explicit_graph_production
+      priority: 5
+      description: >
+        Production and staging environments must use explicit graph connectors
+        for deterministic retrieval traceability (INV-PERF-01). Hard filter.
+      condition:
+        environment: [staging, production]
+      action:
+        type: hard_filter
+        require_capability: explicit_graph
+        preferred_connectors: [langgraph]
+
+    - id: rule_client_mandate
+      priority: 6
+      description: "Honour client-contractually-mandated connector if set on workspace."
+      condition:
+        client_mandated_connector: "!null"
+      action:
+        type: override
+        use_connector: "${workspace.client_mandated_connector}"
+
+    - id: rule_enterprise_plan
+      priority: 7
+      description: "Enterprise plan defaults to LangGraph for full compliance posture."
+      condition:
+        plan_tier: enterprise
+      action:
+        type: soft_preference
+        preferred_connectors: [langgraph]
+
+    - id: rule_starter_budget_us
+      priority: 8
+      description: "Starter plan in US region may use Together AI for cost reduction."
+      condition:
+        plan_tier: starter
+        data_residency: us
+        environment: production
+      action:
+        type: soft_preference
+        preferred_connectors: [langgraph, together_ai]
+
+    - id: rule_development_permissive
+      priority: 99
+      description: "Development environment allows any enabled connector for testing."
+      condition:
+        environment: development
+      action:
+        type: soft_preference
+        preferred_connectors: [langgraph, langchain, crewai, together_ai, anthropic_sdk]
+
+  # ---------------------------------------------------------------------------
+  # CONSTRAINT DEFAULTS
+  # Applied when a constraint is not explicitly set by the workspace or request.
+  # ---------------------------------------------------------------------------
+  constraint_defaults:
+    environment: development
+    data_residency: us
+    plan_tier: professional
+    allow_external_apis: true
+    feature_required: []
+    compliance_flags: []
+    client_mandated_connector: null

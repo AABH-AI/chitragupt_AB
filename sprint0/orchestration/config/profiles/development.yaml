@@ -1,0 +1,32 @@
+# Orchestration profile: Development
+#
+# Applied in local development and CI environments.
+# All connectors are permitted to allow testing and benchmarking.
+# Hard filters from production rules are relaxed.
+
+profile: development
+
+constraints:
+  plan_tier: professional     # simulate professional plan by default in dev
+  data_residency: us
+  compliance_flags: []
+  environment: development
+  allow_external_apis: true
+  required_capabilities: []  # no capability hard filters in development
+
+preferred_connectors:
+  - langgraph
+  - langchain
+  - crewai
+  - together_ai
+  - anthropic_sdk
+
+allow_runtime_override: true   # allow ORCHESTRATION_BACKEND env var to override freely in dev
+
+notes: >
+  In development, engineers can switch connectors freely using the
+  ORCHESTRATION_BACKEND environment variable:
+    ORCHESTRATION_BACKEND=langchain python -m chitragupt.api.app
+    ORCHESTRATION_BACKEND=crewai python -m chitragupt.api.app
+  This allows benchmarking connector behaviour without changing config files.
+  Never set allow_runtime_override: true in staging or production profiles.

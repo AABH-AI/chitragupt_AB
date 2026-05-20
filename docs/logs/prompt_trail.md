@@ -58,6 +58,9 @@
 **P-014**
 > the prompt_trail.md has prompts logged from some other project too remove them only keep the current project prompts and if sometthing is missing inject the necessary prompts - you are free to assume the context based on what we have
 
+**P-015**
+> for the orchestration framework make a configuration file which can select different types of orchestration connectors (for eg - langchain, transormers, together ai, crew ai any adk/sdk etc and the decisioning is at compile time or runtime. the decision should be based on the constraints on security, budget, client choices etc - this should be a fully configurable middleware later on. ensure this project gets logged to the prompt trail
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
