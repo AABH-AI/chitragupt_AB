@@ -82,6 +82,9 @@
 **P-022**
 > push the docs to remote again
 
+**P-023**
+> create another dir called diagrams in /docs which has detailed diagrams - we need solid diagrams for state machine at a concept level hard gates why we need it and so on. all diagrams should be simple to understand and mermaid style create some important understanding docs for now 4-5 should be enough
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
