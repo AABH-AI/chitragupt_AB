@@ -568,14 +568,16 @@ Is there someone missing, or do you want to change a role?
 ### EPIC-1: State Machine Core
 *Everything in P1 items 1, 6, 8*
 
-| Story | Points | P |
-|---|---|---|
-| Define `SessionState` TypedDict with all fields and default values | 2 | 1 |
-| Implement LangGraph graph with 7 state nodes and wired edge conditions | 5 | 1 |
-| Implement transition handler: summary → await CONFIRM → advance | 3 | 1 |
-| Implement REVISIT handler: rollback to named state, present summary | 3 | 2 |
-| Implement SKIP handler: log open questions, flag priority | 2 | 2 |
-| Session persistence: write/read `SessionState` from PostgreSQL | 3 | 1 |
+| Story | Points | P | Status |
+|---|---|---|---|
+| **[DONE]** Rust kernel scaffold — `SessionPhase`, `SessionState`, AC stubs, gate manager, `cargo build` ✓ | 3 | 1 | Done |
+| Define `SessionState` TypedDict with all fields and default values (Python side) | 2 | 1 | Todo |
+| Implement LangGraph graph with 7 state nodes and wired edge conditions | 5 | 1 | Todo |
+| Implement transition handler: summary → await CONFIRM → advance | 3 | 1 | Todo |
+| Implement REVISIT handler: rollback to named state, present summary | 3 | 2 | Todo |
+| Implement SKIP handler: log open questions, flag priority | 2 | 2 | Todo |
+| Session persistence: write/read `SessionState` from PostgreSQL | 3 | 1 | Todo |
+| Wire gRPC server in Rust kernel (`tonic`) — EPIC-1 follow-on | 5 | 1 | Todo |
 
 ### EPIC-2: Intent Classification
 *P1 item 2*

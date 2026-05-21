@@ -85,6 +85,9 @@
 **P-023**
 > create another dir called diagrams in /docs which has detailed diagrams - we need solid diagrams for state machine at a concept level hard gates why we need it and so on. all diagrams should be simple to understand and mermaid style create some important understanding docs for now 4-5 should be enough
 
+**P-024**
+> let us begin with a simple project scaffolding - I have a local rust toolchain on my local machine - we build the rust kernel only for now nothing else with required files and stubs only, tools, cargo dependencies etc and ensure minimal build works - if this is not part of sprint1 make it. log the prompt and start
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
