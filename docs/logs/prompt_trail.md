@@ -67,6 +67,9 @@
 **P-017**
 > we want to redefine the docs in sprint0 - we dont want a doc sprawl reduce the docs to manageable numbers. Also we want to introduce a HITL state aware context for BAs to begin from problem defination and intent ingestion, where the BA is led through all phases of the project planning via active chat communications and uploads docs only at relevant checkpoints including other inputs. Lets remove the orchestration middleware for now and redo the docs again. log the prompt in the prompt registery and do it for all subsequent prompts in this project
 
+**P-018**
+> make the readme prod grade with mermaid style diagrams and also introduce a strict epimestology and database architecture in the appropriate dirs log everything
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
