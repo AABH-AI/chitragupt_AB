@@ -73,6 +73,9 @@
 **P-019**
 > Now since we have enhanced the project our next sprint sprint1 should have a robust state machine design to allow user intent journey with acceptance criterria for state transitioning and a LLM RAG pipeline at each state to ensure the user journey is intutive. Our priority is the Solution having the capability to guide a user on next steps. Log the prompt. Give a dir called sprint1 with a .md file with what we should prioritize in sprint1 - this is our core engine
 
+**P-020**
+> the state transition in sprint1 has to have a acceptance criteria (eg. upload diagrams or architecture plans etc or client intent etc) ensure it is part of the sprint before we move on
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026

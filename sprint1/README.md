@@ -205,6 +205,7 @@ flowchart TD
 | `REVISIT` | BA wants to go back to a prior phase | "can we revisit", "I need to change the stakeholders", "go back to" |
 | `SKIP` | BA wants to move on without answering | "skip this", "I don't know", "not applicable", "come back to this" |
 | `CLARIFICATION_REQUEST` | BA is asking the system a question | Question directed at the system, not an answer |
+| `UPLOAD_COMPLETE` | A document has finished ingestion and is now indexed | System event fired by ingestion pipeline on successful completion; triggers a re-evaluation of upload AC |
 | `OUT_OF_SCOPE` | BA's message is off-topic for the current phase | Unrelated queries; handled with a gentle redirect |
 
 ---
@@ -243,7 +244,9 @@ These criteria are the engine's "readiness evaluator." Each criterion is a discr
 
 **AC-S1-5** BA has responded with `CONFIRM` intent to the system's problem summary.
 
-**Failure behavior:** For each unmet criterion, the Gap Analyzer selects the highest-priority gap and the Guidance Generator asks exactly that question. Order: AC-S1-1 → AC-S1-2 → AC-S1-3 → AC-S1-4 → AC-S1-5.
+**AC-S1-U1 (Client Intent Document — Triggered)** If during this phase the BA references an existing project brief, discovery document, scope statement, or client-provided intent document, the system must issue an upload prompt before the transition offer is made. One of the following must be true before proceeding: (a) the referenced document has been uploaded and indexed, OR (b) the BA has explicitly declined upload. If a document was referenced but neither condition is met, the transition offer is withheld. If the BA declines upload, all entities extracted from this phase retain `trust_tier = 4` (secondary document level) rather than being elevated to tier 3.
+
+**Failure behavior:** For each unmet criterion, the Gap Analyzer selects the highest-priority gap and the Guidance Generator asks exactly that question. Order: AC-S1-1 → AC-S1-2 → AC-S1-3 → AC-S1-4 → AC-S1-U1 (if triggered) → AC-S1-5.
 
 ---
 
@@ -259,7 +262,11 @@ These criteria are the engine's "readiness evaluator." Each criterion is a discr
 
 **AC-S2-5** BA has confirmed the actor registry with `CONFIRM` intent.
 
-**Failure behavior:** If AC-S2-1 is unmet, ask "Who are the main people or teams that will use this system?" If AC-S2-2 is unmet, ask "Who has final sign-off authority on this project?" If AC-S2-4 is unmet, ask "Are there any external systems or third-party tools this needs to connect to?"
+**AC-S2-U1 (Checkpoint A — Required Prompt Gate)** The system must have issued the Checkpoint A upload prompt before the transition offer is made. The prompt must have been presented and the BA must have responded to it. One of the following must be true: (a) ≥ 1 document has been uploaded and indexed at Checkpoint A — org chart, RACI matrix, stakeholder map, or responsibility assignment document — OR (b) BA has explicitly skipped via `SKIP` intent or stated no documents exist. Offering a state transition before this prompt has been issued and responded to is a pipeline error, not an AC failure.
+
+**AC-S2-U2 (Decision Authority Evidence)** If `actors` contains a decision-maker (`authority_level = decision_maker`) whose identity was stated only in chat with no supporting document, the system flags that actor record with `evidence_type = chat_only`. This does not block transition but the actor will appear in the BRD with a `[UNVERIFIED — NO SOURCE DOCUMENT]` tag until a document is uploaded that corroborates their authority.
+
+**Failure behavior:** If AC-S2-1 is unmet, ask "Who are the main people or teams that will use this system?" If AC-S2-2 is unmet, ask "Who has final sign-off authority on this project?" If AC-S2-4 is unmet, ask "Are there any external systems or third-party tools this needs to connect to?" If AC-S2-U1 is unmet (prompt not yet issued), issue the Checkpoint A prompt: "Before we move on — do you have an org chart, RACI, or any stakeholder document you can share? It helps us verify decision authority."
 
 ---
 
@@ -277,11 +284,19 @@ These criteria are the engine's "readiness evaluator." Each criterion is a discr
 
 **AC-S3-6** BA has confirmed the requirements list with `CONFIRM` intent.
 
+**AC-S3-U1 (Checkpoint B — Required Prompt Gate)** The system must have issued the Checkpoint B upload prompt before the transition offer is made. One of the following must be true: (a) ≥ 1 document has been uploaded at Checkpoint B — wireframes, mockups, process flow diagrams, existing feature lists, meeting notes, workshop outputs, or legacy system documentation — OR (b) BA has explicitly skipped. Transition offer withheld until the prompt has been issued and responded to.
+
+**AC-S3-U2 (Regulated Domain Hard Gate)** If `business_domain` is `fintech`, `healthcare`, or `government`: at least 1 source document must have been uploaded across all checkpoints to date (A or B), OR the BA must have explicitly stated "working from memory only" and this has been recorded in `session_state.memory_only_waiver = true`. Requirements in a regulated domain with zero document grounding are individually tagged `[HIGH RISK — NO SOURCE DOCUMENT]` and the BRD will include a mandatory section flagging this for expert review. This criterion does not block transition but must be evaluated and surfaced to the BA before confirming.
+
+**AC-S3-U3 (Architecture / Diagram Prompt — Triggered)** If any requirement references a UI, screen, dashboard, workflow, or system integration, the system must have prompted for a diagram or wireframe upload at Checkpoint B. If the BA declines, the requirement is marked `source_evidence = conversation_only`. Requirements with this flag carry a `confidence_modifier = -0.10` applied before the confidence score is finalized.
+
 **Failure behavior (priority order):**
-1. If requirements < 5 → probe the least-covered actor: "What does [Actor] need to be able to do?"
-2. If no NFR → "Are there any performance, security, or availability expectations we should capture?"
-3. If an actor has no linked requirement → "What does [UnlinkedActor] specifically need from this system?"
-4. If open must-resolve gaps > 2 → surface the top gap: "We still need clarity on [gap] before we can finalize requirements — can you help with this?"
+1. If AC-S3-U1 not met (Checkpoint B prompt not yet issued) → issue prompt: "Before we move on — do you have any wireframes, process diagrams, or existing feature documentation you can share?"
+2. If AC-S3-U2 applies and no upload and no waiver → surface: "Given this is a [domain] project, we strongly recommend attaching a reference document. Do you want to proceed without one? Requirements will be flagged for expert review."
+3. If requirements < 5 → probe the least-covered actor: "What does [Actor] need to be able to do?"
+4. If no NFR → "Are there any performance, security, or availability expectations we should capture?"
+5. If an actor has no linked requirement → "What does [UnlinkedActor] specifically need from this system?"
+6. If open must-resolve gaps > 2 → surface the top gap: "We still need clarity on [gap] before we can finalize requirements — can you help with this?"
 
 ---
 
@@ -299,7 +314,20 @@ These criteria are the engine's "readiness evaluator." Each criterion is a discr
 
 **AC-S4-6** BA has confirmed the constraint register with `CONFIRM` intent.
 
-**Failure behavior (priority order):** Ask about compliance first (highest risk if wrong), then data residency, then timeline, then budget.
+**AC-S4-U1 (Checkpoint C — Required Prompt Gate)** The system must have issued the Checkpoint C upload prompt before the transition offer is made. One of the following must be true: (a) ≥ 1 document uploaded at Checkpoint C — compliance policy, security requirements document, data classification policy, vendor contract, infra specification, or hosting requirement — OR (b) BA has explicitly skipped. Transition offer withheld until prompt issued and responded to.
+
+**AC-S4-U2 (Compliance Document Hard Gate)** If `compliance_flags` contains any of GDPR, HIPAA, SOC2, PCI-DSS, ISO 27001, FedRAMP: a compliance reference document must have been uploaded and indexed, OR the BA must explicitly state "no compliance documentation exists" (recorded as `compliance_doc_waiver = true`). Without a source document or explicit waiver, compliance-related constraints are tagged `[COMPLIANCE RISK — REQUIRES DOCUMENTATION]` and the BRD will flag this section for mandatory legal/compliance review. This is a soft gate — it does not block transition but must be surfaced and acknowledged by the BA.
+
+**AC-S4-U3 (Data Residency Evidence Gate)** If `data_residency` is `eu`, `apac`, or `on_premise`: a hosting specification, data processing agreement, or infrastructure document must have been prompted for upload. If not uploaded, all data residency constraints are tagged `[UNVERIFIED — INFRASTRUCTURE REVIEW REQUIRED]`. Without verified residency documentation, architecture decisions in the next state cannot be made with confidence.
+
+**AC-S4-U4 (Architecture Plan — Triggered)** If the BA has indicated that an existing technical architecture or infrastructure is in place, or has named a specific hosting provider or platform, the system must prompt for architecture diagrams or infrastructure plans at Checkpoint C. If uploaded, the documents are indexed and used to inform the ARCHITECTURE_ALIGNMENT phase. If declined, the session proceeds with `existing_architecture_documented = false`, and all architecture decisions in the next state carry `[SYNTHESIZED]` confidence tier regardless of computed score.
+
+**Failure behavior (priority order):**
+1. If AC-S4-U1 not met → issue Checkpoint C prompt: "Before we wrap up constraints — do you have any compliance policies, infrastructure specs, or vendor agreements you can share?"
+2. If AC-S4-U2 applies and no upload and no waiver → surface: "This project has compliance requirements. Do you have the relevant policy document? If not, I'll flag those constraints for legal review."
+3. If AC-S4-U3 applies → "What's the target region or hosting environment for this system? Do you have an infrastructure spec?"
+4. If AC-S4-U4 triggered and no upload → "You mentioned an existing system — can you share the architecture diagram or technical spec?"
+5. Otherwise ask about compliance first, then data residency, then timeline, then budget.
 
 ---
 
@@ -311,7 +339,11 @@ These criteria are the engine's "readiness evaluator." Each criterion is a discr
 
 **AC-S5-3** BA has confirmed the decision direction summary with `CONFIRM` intent.
 
-**Failure behavior:** For each undecided decision, the system presents the business-language framing of the question (e.g., "Will multiple different organizations use this system, or is it for one company internally?" → derives multi-tenancy stance → D-005 direction). One question per turn.
+**AC-S5-U1 (Existing Architecture — Triggered Hard Gate)** If at any prior point in the session the BA indicated an existing system, legacy platform, or prior technical implementation, and no architecture document was uploaded at Checkpoint C, the system must issue a final architecture upload prompt at the start of ARCHITECTURE_ALIGNMENT before any decision questions are asked. One of the following must be true to proceed past this gate: (a) an architecture diagram, system design doc, or technical specification has been uploaded and indexed — OR (b) the BA explicitly confirms "no architecture documentation exists." Until this gate is resolved, the first decision question is withheld. All decisions guided without existing architecture documentation carry `confidence_tier = synthesized` and are tagged `[NO EXISTING ARCHITECTURE — REVIEW WITH ENGINEERING]` in the decision summary.
+
+**AC-S5-U2 (Reference Architecture — Recommended)** If the BA names a known reference architecture, design pattern, or industry standard (e.g., "we want something like AWS serverless", "microservices", "event-driven"), the system prompts for any related architecture documentation, RFP responses, or vendor proposals the client may have. Non-blocking — if declined, the named pattern is recorded as `decision_reference = chat_stated` and used as a soft hint in decision guidance.
+
+**Failure behavior:** If AC-S5-U1 gate is open (existing system mentioned, no architecture doc, no confirmation), issue: "Before we look at technical decisions — you mentioned an existing system earlier. Do you have an architecture diagram or technical spec for it? It'll help us make better-informed choices." Then proceed with decisions only after gate resolves. For each undecided decision, present the business-language framing. One question per turn.
 
 ---
 
@@ -329,11 +361,93 @@ These criteria are the engine's "readiness evaluator." Each criterion is a discr
 
 **AC-S6-6** `ClientSignOff` record has been created with `status = pending` and the sign-off token has been dispatched.
 
-**Failure behavior:**
-1. If orphan knowledge → surface the orphan claim: "We have an unsupported claim here — [claim]. Can you point to a source, or should we remove it?"
-2. If unresolved conflicts → present the conflict: "There's a contradiction between [Source A] and [Source B] on [topic]. Which is correct?"
-3. If must-resolve gaps remain → surface the top gap.
-4. If BRD not yet explicitly approved → "Are you ready to approve this BRD and proceed to sign-off?"
+**AC-S6-U1 (BRD Artifact Hard Gate)** The BRD export artifact must be generated, persisted to object storage, and have a valid `storage_uri` and `file_hash` in the `ExportArtifact` record. `artifact_type = brd_docx` or `brd_pdf`. Generation must have completed without error. A BRD that failed generation or has no persisted artifact cannot be approved.
+
+**AC-S6-U2 (HLD Artifact Hard Gate)** The High-Level Architecture Diagram must be generated and persisted. `artifact_type = hld_mermaid` (source) plus at least one rendered format (`hld_png` or `hld_svg`). Both must have valid `storage_uri` and `file_hash`.
+
+**AC-S6-U3 (Client Review Input — Checkpoint D)** The system must have issued the Checkpoint D upload prompt before requesting final BRD approval. One of the following must be true: (a) client review comments, prior BRD version, or reference material have been uploaded and any conflicts or discrepancies between them and the draft BRD have been surfaced to the BA — OR (b) BA explicitly confirms "no client input to incorporate." If client comments were uploaded but conflicts have not been reviewed, the BRD approval is withheld until conflicts are resolved.
+
+**AC-S6-U4 (Sign-off Token Hard Gate)** `ClientSignOff.status = signed`. The signature token must have been consumed — i.e., the client has clicked the sign-off link and the token has been burned. `SIGNED_OFF` is unreachable until this record exists with status `signed`. A `status = pending` record is necessary but not sufficient.
+
+**Failure behavior (priority order):**
+1. If AC-S6-U1 or AC-S6-U2 not met → "The BRD/HLD hasn't been generated yet — generating now." Trigger generation pipeline.
+2. If orphan knowledge → surface the claim: "We have an unsupported claim — [claim]. Can you point to a source, or should we remove it?"
+3. If unresolved conflicts → present the conflict side-by-side: "There's a contradiction between [Source A] and [Source B] on [topic]. Which is correct?"
+4. If must-resolve gaps remain → surface the top gap.
+5. If AC-S6-U3 not met (Checkpoint D prompt not issued) → "Before final approval — do you have any client review comments or a prior BRD to compare against?"
+6. If client comments uploaded but conflicts unresolved → work through conflicts one at a time.
+7. If BRD not yet explicitly approved → "Are you ready to approve this BRD and send it for client sign-off?"
+8. If AC-S6-U4 not met (awaiting client signature) → "The BRD has been sent to [client email] for signature. We'll move to sign-off once they confirm."
+
+---
+
+## 4a. Upload Requirements Matrix
+
+Every state transition has upload criteria that the `GapAnalyzerAgent` evaluates alongside the conversational AC. Upload gates are classified into four types:
+
+| Classification | Behaviour |
+|---|---|
+| **HARD GATE** | Transition is unreachable until condition is met. No waiver. |
+| **REQUIRED PROMPT** | System must issue the upload prompt and receive a response before the transition offer. The prompt not being issued is a pipeline error. BA may skip. |
+| **TRIGGERED** | System detects a reference to an existing document and issues an upload prompt. Non-blocking if BA declines; absence recorded in confidence metadata. |
+| **RECOMMENDED** | System prompts once; BA may skip; no confidence impact. |
+
+---
+
+```mermaid
+flowchart TD
+    S1[PROBLEM_INTAKE] -->|AC-S1-U1 TRIGGERED\nClient intent doc referenced?| S2
+    S2[STAKEHOLDER_DISCOVERY] -->|AC-S2-U1 REQUIRED PROMPT\nCheckpoint A issued + responded| S3
+    S3[REQUIREMENT_ELICITATION] -->|AC-S3-U1 REQUIRED PROMPT\nCheckpoint B issued + responded\nAC-S3-U2 HARD GATE if regulated domain\nAC-S3-U3 TRIGGERED if UI or workflow mentioned| S4
+    S4[CONSTRAINT_CAPTURE] -->|AC-S4-U1 REQUIRED PROMPT\nCheckpoint C issued + responded\nAC-S4-U2 HARD GATE if compliance flags\nAC-S4-U3 GATE if non-US residency\nAC-S4-U4 TRIGGERED if existing system named| S5
+    S5[ARCHITECTURE_ALIGNMENT] -->|AC-S5-U1 TRIGGERED HARD GATE\nExisting architecture doc\nAC-S5-U2 RECOMMENDED\nReference architecture| S6
+    S6[REVIEW_AND_SIGN_OFF] -->|AC-S6-U1 HARD GATE BRD artifact\nAC-S6-U2 HARD GATE HLD artifact\nAC-S6-U3 REQUIRED PROMPT Checkpoint D\nAC-S6-U4 HARD GATE client signature| S7
+    S7[SIGNED_OFF]
+```
+
+---
+
+### Upload AC Reference Table
+
+| AC ID | Transition | Upload Type | Classification | Hard Block? |
+|---|---|---|---|---|
+| AC-S1-U1 | PROBLEM_INTAKE → STAKEHOLDER_DISCOVERY | Project brief, client scope, discovery doc | TRIGGERED | No — entities downgraded to trust tier 4 if declined |
+| AC-S2-U1 | STAKEHOLDER_DISCOVERY → REQUIREMENT_ELICITATION | Org chart, RACI, stakeholder map | REQUIRED PROMPT | Prompt must be issued; BA may skip |
+| AC-S2-U2 | STAKEHOLDER_DISCOVERY → REQUIREMENT_ELICITATION | Decision authority evidence | TRIGGERED | No — actor flagged `[UNVERIFIED]` if no doc |
+| AC-S3-U1 | REQUIREMENT_ELICITATION → CONSTRAINT_CAPTURE | Wireframes, process flows, existing specs | REQUIRED PROMPT | Prompt must be issued; BA may skip |
+| AC-S3-U2 | REQUIREMENT_ELICITATION → CONSTRAINT_CAPTURE | Any source document (regulated domain) | HARD GATE | Must upload OR record explicit waiver |
+| AC-S3-U3 | REQUIREMENT_ELICITATION → CONSTRAINT_CAPTURE | UI diagram, workflow diagram | TRIGGERED | No — requirement flagged `confidence_modifier -0.10` |
+| AC-S4-U1 | CONSTRAINT_CAPTURE → ARCHITECTURE_ALIGNMENT | Compliance doc, security policy, vendor contract | REQUIRED PROMPT | Prompt must be issued; BA may skip |
+| AC-S4-U2 | CONSTRAINT_CAPTURE → ARCHITECTURE_ALIGNMENT | Compliance reference doc (GDPR / HIPAA / SOC2 etc.) | HARD GATE (soft) | Must upload OR record waiver; constraints flagged |
+| AC-S4-U3 | CONSTRAINT_CAPTURE → ARCHITECTURE_ALIGNMENT | Infra spec, hosting requirement (non-US residency) | GATE | Must upload OR residency constraints flagged `[UNVERIFIED]` |
+| AC-S4-U4 | CONSTRAINT_CAPTURE → ARCHITECTURE_ALIGNMENT | Architecture plan, infra diagram | TRIGGERED | No — next-state decisions downgraded to `[SYNTHESIZED]` |
+| AC-S5-U1 | ARCHITECTURE_ALIGNMENT → REVIEW_AND_SIGN_OFF | Existing architecture diagram, technical spec | TRIGGERED HARD GATE | First decision question withheld until gate resolves |
+| AC-S5-U2 | ARCHITECTURE_ALIGNMENT → REVIEW_AND_SIGN_OFF | Reference architecture, RFP, vendor proposal | RECOMMENDED | No block; named pattern recorded as `decision_reference` |
+| AC-S6-U1 | REVIEW_AND_SIGN_OFF → SIGNED_OFF | BRD export (DOCX or PDF) | HARD GATE | `ExportArtifact` must exist with valid `storage_uri` |
+| AC-S6-U2 | REVIEW_AND_SIGN_OFF → SIGNED_OFF | HLD diagram (Mermaid + render) | HARD GATE | Both source and rendered format must be persisted |
+| AC-S6-U3 | REVIEW_AND_SIGN_OFF → SIGNED_OFF | Client review comments, prior BRD | REQUIRED PROMPT | Prompt must be issued; BA may skip |
+| AC-S6-U4 | REVIEW_AND_SIGN_OFF → SIGNED_OFF | Client digital sign-off (signature token) | HARD GATE | `ClientSignOff.status = signed` — no waiver |
+
+---
+
+### How Upload AC Integrates with the Gap Analyzer
+
+The `GapAnalyzerAgent` evaluates upload AC alongside conversational AC after every turn. Upload gaps are surfaced with a distinct message format:
+
+```
+[Upload Prompt — Checkpoint B]
+Before we move on — you mentioned a user onboarding flow earlier.
+Do you have a process diagram or wireframe for that? It would
+help us ground those requirements in a source document.
+
+[Skip or upload ↑]
+```
+
+Upload AC evaluation runs in this order per turn:
+1. Check if any HARD GATE upload AC is unresolvable without user action → surface immediately.
+2. Check if any REQUIRED PROMPT has not been issued → issue it before any transition offer.
+3. Check if any TRIGGERED condition has fired but not been resolved → insert prompt into guidance.
+4. Only after all upload gates are resolved does the GapAnalyzer evaluate conversational AC.
 
 ---
 
@@ -414,33 +528,38 @@ Is there someone missing, or do you want to change a role?
 ### P1 — Must ship for Sprint 1 to close
 
 1. **LangGraph state machine skeleton** — all 7 states as typed nodes, `SessionState` TypedDict, wired transitions
-2. **IntentClassifierAgent** — all 8 intent types, fast LLM, ≤ 200ms p99
+2. **IntentClassifierAgent** — all 9 intent types including `UPLOAD_COMPLETE`, fast LLM, ≤ 200ms p99
 3. **EntityExtractorAgent** — extractors for PROBLEM_INTAKE (problem statement, domain, users, success definition) and STAKEHOLDER_DISCOVERY (actor name, role, authority, external systems)
-4. **GapAnalyzerAgent** — AC evaluation for AC-S1 and AC-S2; priority ordering of unmet criteria; next question recommendation
+4. **GapAnalyzerAgent** — conversational AC evaluation for AC-S1 and AC-S2 + upload AC evaluation for AC-S1-U1 and AC-S2-U1/U2; priority ordering of unmet criteria
 5. **GuidanceGeneratorAgent** — acknowledge + capture + next-question format enforced by output schema; premium LLM; streaming
 6. **Session state persistence** — write to PostgreSQL after every turn; session resumable after disconnect
 7. **Basic RAG retrieval** — dense vector search with mandatory filters; no hybrid yet; used from STAKEHOLDER_DISCOVERY onward
 8. **Transition handler** — proposal → confirmation → state advance; handles BA denial gracefully
-9. **PROBLEM_INTAKE → STAKEHOLDER_DISCOVERY full loop** — end-to-end working before any other state is built
+9. **Upload gate core** — REQUIRED PROMPT tracker, checkpoint prompt templates (A–D), TRIGGERED detector, waiver recording
+10. **PROBLEM_INTAKE → STAKEHOLDER_DISCOVERY full loop** — end-to-end working, including AC-S2-U1 Checkpoint A prompt gate
 
 ### P2 — Complete within Sprint 1 if P1 is stable
 
-10. **EntityExtractorAgent for REQUIREMENT_ELICITATION** — functional/NFR extraction per actor, MoSCoW priority, acceptance criteria candidates
-11. **EntityExtractorAgent for CONSTRAINT_CAPTURE** — constraint type, timeline, budget, compliance flags, data residency
-12. **GapAnalyzerAgent** — AC-S3 and AC-S4 evaluation
-13. **Document ingestion at checkpoints** — upload → chunk → embed → index; `human_stated` provenance flag
-14. **Hybrid search** — BM25 sparse vector + dense fusion (RRF)
-15. **Actor–Requirement coverage check** — AC-S3-3 enforcement
-16. **Full loop: PROBLEM_INTAKE → CONSTRAINT_CAPTURE**
+11. **EntityExtractorAgent for REQUIREMENT_ELICITATION** — functional/NFR extraction per actor, MoSCoW priority, acceptance criteria candidates
+12. **EntityExtractorAgent for CONSTRAINT_CAPTURE** — constraint type, timeline, budget, compliance flags, data residency
+13. **GapAnalyzerAgent** — AC-S3 and AC-S4 evaluation including all upload AC (AC-S3-U1/U2/U3, AC-S4-U1/U2/U3/U4)
+14. **Document ingestion pipeline** — upload → PII scrub → chunk → embed → index; `UPLOAD_COMPLETE` event; `source_evidence` field
+15. **HARD GATE evaluator** — blocks transition offer when unresolvable gate open; surfaces specific resolution action
+16. **Regulated domain gate (AC-S3-U2)** — enforced for fintech / healthcare / government domains
+17. **Hybrid search** — BM25 sparse vector + dense fusion (RRF)
+18. **Actor–Requirement coverage check** — AC-S3-3 enforcement
+19. **Full loop: PROBLEM_INTAKE → CONSTRAINT_CAPTURE** — including all upload gates for transitions 1–4
 
 ### P3 — Stretch goals for Sprint 1 / entry items for Sprint 2
 
-17. **EntityExtractorAgent for ARCHITECTURE_ALIGNMENT** — business-language question → decision direction mapping
-18. **BRD draft generator** — structured requirements → templated DOCX/Markdown
-19. **HLD generator** — Mermaid diagram from actors, integrations, and system components
-20. **Conflict detection** — flag when two retrieved chunks from same-trust-tier sources contradict on same topic
-21. **Full loop: PROBLEM_INTAKE → SIGNED_OFF**
-22. **Cost circuit breaker** — budget cap check before every LLM invocation
+20. **EntityExtractorAgent for ARCHITECTURE_ALIGNMENT** — business-language question → decision direction mapping
+21. **AC-S5-U1 Existing Architecture Gate** — detect existing-system signal in session, issue gate prompt, withhold first decision question
+22. **BRD draft generator** — structured requirements → templated DOCX/Markdown (AC-S6-U1)
+23. **HLD generator** — Mermaid diagram from actors, integrations, and system components (AC-S6-U2)
+24. **Conflict detection** — flag when two retrieved chunks from same-trust-tier sources contradict on same topic
+25. **Client sign-off token flow** — generate token, dispatch to email, burn on click, `SIGNED_OFF` reachable (AC-S6-U4)
+26. **Full loop: PROBLEM_INTAKE → SIGNED_OFF** — all upload gates enforced end-to-end
+27. **Cost circuit breaker** — budget cap check before every LLM invocation
 
 ---
 
@@ -501,9 +620,28 @@ Is there someone missing, or do you want to change a role?
 | Dense retrieval with mandatory 4-filter query | 3 | 1 |
 | State-aware query construction per state (see Section 5 table) | 2 | 1 |
 | Document ingestion pipeline: upload → PII scrub → chunk → embed → index | 5 | 2 |
+| `UPLOAD_COMPLETE` event fires on ingestion success; triggers AC re-evaluation | 2 | 2 |
 | Hybrid search: BM25 sparse vector generation + RRF fusion | 5 | 2 |
 | Cross-encoder re-ranker integration | 3 | 3 |
 | `human_stated` provenance flag on chat-sourced requirements | 2 | 2 |
+| `source_evidence` field on each entity: `document`, `chat_stated`, `inferred` | 2 | 2 |
+
+### EPIC-7: Upload Gate System
+*New — upload AC enforcement across all transitions*
+
+| Story | Points | P |
+|---|---|---|
+| Upload AC registry: define all 16 upload AC rules as evaluable conditions in `GapAnalyzerAgent` | 3 | 1 |
+| Checkpoint prompt templates: A, B, C, D — distinct prompt text per checkpoint | 2 | 1 |
+| REQUIRED PROMPT tracker: record which checkpoint prompts have been issued and responded to in `SessionState` | 2 | 1 |
+| TRIGGERED condition detector: scan session messages for document references (brief, spec, diagram, plan) and fire trigger | 3 | 2 |
+| HARD GATE evaluator: block transition offer when unresolvable gate is open; surface specific resolution action | 3 | 2 |
+| Waiver recording: store explicit BA skips and waivers (`compliance_doc_waiver`, `memory_only_waiver`) in `SessionState` | 2 | 2 |
+| Regulated domain gate (AC-S3-U2): evaluate `business_domain` and enforce ≥ 1 uploaded doc or waiver | 3 | 2 |
+| Trust tier downgrade on upload decline: apply `confidence_modifier` and `trust_tier` adjustments after BA skips | 2 | 2 |
+| Upload gap message format: distinct formatting for upload prompts vs. conversational AC questions | 2 | 2 |
+| Integration test: run full session for `healthcare` domain, verify regulated-domain gate fires and is recorded | 3 | 2 |
+| Integration test: client sign-off token flow — generate token, dispatch, simulate burn, verify `SIGNED_OFF` reached | 5 | 3 |
 
 ### EPIC-6: Guidance Generation
 *P1 item 5*
@@ -548,6 +686,12 @@ Sprint 1 closes when all of the following are true:
 - [ ] AC-S1, AC-S2, AC-S3, and AC-S4 are all evaluated after every relevant turn and the correct gap is surfaced.
 - [ ] A document uploaded at Checkpoint B is chunked, embedded, and retrievable within the same session.
 - [ ] Requirements extracted from uploaded documents carry `source_chunks` provenance; requirements from chat carry `human_stated = true`.
+- [ ] Checkpoint A prompt (AC-S2-U1) is issued before the STAKEHOLDER_DISCOVERY transition offer. If not issued, the transition offer is withheld.
+- [ ] Checkpoint B prompt (AC-S3-U1) is issued before the REQUIREMENT_ELICITATION transition offer.
+- [ ] A session with `business_domain = healthcare` cannot transition REQUIREMENT_ELICITATION → CONSTRAINT_CAPTURE without ≥ 1 uploaded document or an explicit `memory_only_waiver`.
+- [ ] A session with `compliance_flags = [GDPR]` flags all compliance constraints with `[COMPLIANCE RISK — REQUIRES DOCUMENTATION]` when no compliance doc is uploaded.
+- [ ] `UPLOAD_COMPLETE` event fires after ingestion and triggers a re-evaluation of upload AC in `GapAnalyzerAgent`.
+- [ ] Upload gate prompts use distinct formatting from conversational AC questions in the guidance output.
 
 **Quality:**
 - [ ] `IntentClassifier` test suite: ≥ 90% accuracy across 40 labeled messages.
