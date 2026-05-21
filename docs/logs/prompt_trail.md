@@ -70,6 +70,9 @@
 **P-018**
 > make the readme prod grade with mermaid style diagrams and also introduce a strict epimestology and database architecture in the appropriate dirs log everything
 
+**P-019**
+> Now since we have enhanced the project our next sprint sprint1 should have a robust state machine design to allow user intent journey with acceptance criterria for state transitioning and a LLM RAG pipeline at each state to ensure the user journey is intutive. Our priority is the Solution having the capability to guide a user on next steps. Log the prompt. Give a dir called sprint1 with a .md file with what we should prioritize in sprint1 - this is our core engine
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
