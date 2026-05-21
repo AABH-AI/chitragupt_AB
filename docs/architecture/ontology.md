@@ -237,7 +237,8 @@ The final output artifact — an aggregated, versioned collection of approved Re
 | `created_at` | timestamp | ✅ | |
 | `locked_at` | timestamp | — | Set when status becomes `locked`; immutable thereafter |
 | `locked_by` | UUID | — | |
-| `export_formats` | string[] | — | Formats this spec has been exported to |
+| `export_formats` | string[] | — | Formats this spec has been exported to: `markdown`, `docx`, `pdf`, `brd_docx`, `brd_pdf`, `hld_mermaid`, `hld_png`, `hld_svg` |
+| `client_sign_off_id` | UUID | — | FK to ClientSignOff; set when the client formally approves this version; triggers `status → locked` |
 | `completeness_score` | float (0–1) | — | System-calculated completeness against domain checklist |
 
 ---
@@ -297,6 +298,8 @@ A reusable completeness checklist and output structure for a specific industry v
 | `output_sections` | jsonb | ✅ | Ordered list of spec sections with descriptions |
 | `domain_glossary` | jsonb | — | Key terms and their domain-specific definitions |
 | `compliance_requirements` | string[] | — | Regulatory standards relevant to this domain |
+| `brd_sections` | jsonb | — | Ordered BRD section definitions mapping requirement types to BRD chapter layout (used by `BRDWriterAgentNode`) |
+| `hld_component_hints` | jsonb | — | System component categories to extract when generating the HLD (e.g., services, external integrations, data stores, actor swim-lanes) |
 | `is_system_template` | boolean | ✅ | True = Chitragupt-provided; False = org-customized |
 | `owner_workspace_id` | UUID | — | Null for system templates; set for org-customized |
 
@@ -422,6 +425,87 @@ Rolling cost aggregation per project — materialized view or computed on query.
 
 ---
 
+### 1.8 Output & Sign-Off Entities
+
+These entities represent formalized output artifacts produced from an approved Specification and the client approval workflow that locks them.
+
+#### 1.8.1 `ExportArtifact`
+
+A versioned output file generated from an approved or locked Specification.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `artifact_id` | UUID | ✅ | |
+| `spec_id` | UUID | ✅ | Parent Specification |
+| `project_id` | UUID | ✅ | |
+| `tenant_id` | UUID | ✅ | |
+| `artifact_type` | enum | ✅ | `brd_docx`, `brd_pdf`, `hld_mermaid`, `hld_png`, `hld_svg`, `spec_markdown`, `spec_docx`, `spec_pdf` |
+| `storage_uri` | string | ✅ | S3 path: `s3://.../{{tenant_id}}/{{project_id}}/exports/{{artifact_id}}.{{ext}}` |
+| `file_hash` | string | ✅ | SHA-256 of file contents for integrity verification |
+| `generated_at` | timestamp | ✅ | |
+| `generated_by` | string | ✅ | Agent ID or user ID that triggered generation |
+| `brd_template_id` | UUID | — | BRD template applied (for `brd_*` artifact types) |
+| `spec_version` | integer | ✅ | Version of the parent Specification at export time |
+| `is_sign_off_copy` | boolean | ✅ | True if this artifact was the one sent for client sign-off |
+| `sign_off_id` | UUID | — | FK to ClientSignOff; set once the client approves this artifact |
+
+#### 1.8.2 `BRDTemplate`
+
+A structured template that maps Specification contents into a formal Business Requirements Document layout.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `brd_template_id` | UUID | ✅ | |
+| `name` | string | ✅ | e.g., "Standard BRD v1", "Fintech Payments BRD" |
+| `domain` | enum | — | If domain-specific; null for general-purpose templates |
+| `sections` | jsonb | ✅ | Ordered section definitions (see sub-schema below) |
+| `cover_page_fields` | jsonb | — | Fields rendered on the cover page: project name, client, date, version, signatories |
+| `include_traceability_matrix` | boolean | ✅ | Whether to append a source-to-requirement traceability table |
+| `include_glossary` | boolean | ✅ | Whether to append the domain glossary from `DomainTemplate.domain_glossary` |
+| `is_system_template` | boolean | ✅ | True = Chitragupt-provided; False = org-customized |
+| `owner_workspace_id` | UUID | — | Null for system templates; set for org-customized copies |
+
+**BRD Section sub-schema:**
+
+```json
+{
+  "section_id": "BRD-S-01",
+  "title": "Executive Summary",
+  "description": "High-level business context and project objective",
+  "source": "synthesized",
+  "requirement_types": [],
+  "is_required": true,
+  "order": 1
+}
+```
+
+Valid `source` values: `synthesized`, `functional_requirements`, `non_functional_requirements`, `business_rules`, `data_requirements`, `integration_requirements`, `compliance_requirements`, `constraints`, `assumptions`, `open_questions`, `actors`.
+
+#### 1.8.3 `ClientSignOff`
+
+A tamper-evident record of formal client approval of a specific ExportArtifact. Creating this record and setting `status = signed` is the only mechanism that transitions a Specification to `locked`.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `sign_off_id` | UUID | ✅ | |
+| `spec_id` | UUID | ✅ | The Specification version being approved |
+| `artifact_id` | UUID | ✅ | The specific ExportArtifact the client reviewed |
+| `project_id` | UUID | ✅ | |
+| `tenant_id` | UUID | ✅ | |
+| `signed_by_stakeholder_id` | UUID | ✅ | FK to Stakeholder (the client signatory) |
+| `signed_by_email` | string | ✅ | Email confirmed at time of signing; immutable |
+| `signed_at` | timestamp | — | Server-set; immutable; null until status = `signed` |
+| `signature_token` | string | ✅ | Single-use HMAC token from the sign-off invite link; burned on first use |
+| `token_expires_at` | timestamp | ✅ | 7 days after invite creation |
+| `sign_off_method` | enum | ✅ | `email_link`, `in_app`, `wet_signature_upload` |
+| `status` | enum | ✅ | `pending`, `signed`, `declined`, `expired` |
+| `declined_reason` | text | — | Stakeholder-provided reason when status = `declined` |
+| `ip_address` | string | — | IP address at time of signing (audit record) |
+
+**Effect of `status = signed`:** `Specification.status → locked`, `Specification.client_sign_off_id` set, `Specification.locked_at` set. No UPDATE operations are permitted on the Specification or its Requirements thereafter. Outbound webhooks and Jira pushes are unblocked (INV-HITL-02).
+
+---
+
 ## 2. Relationships (The Knowledge Graph)
 
 ### 2.1 Core Entity Relationships
@@ -478,6 +562,18 @@ Specification
   └── REFERENCES many Gaps (unresolved)
   └── REFERENCES many Conflicts (unresolved)
   └── BUILT_FROM DomainTemplate
+  └── HAS_MANY ExportArtifacts
+  └── HAS_ONE ClientSignOff (only when locked)
+
+ExportArtifact
+  └── BELONGS_TO Specification
+  └── RENDERED_FROM BRDTemplate (for brd_* artifact types)
+  └── MAY_HAVE one ClientSignOff
+
+ClientSignOff
+  └── REFERENCES Specification (the version approved)
+  └── REFERENCES ExportArtifact (the document reviewed)
+  └── SIGNED_BY Stakeholder
 ```
 
 ### 2.2 Relationship Detail Table
@@ -494,6 +590,10 @@ Specification
 | `User APPROVES Requirement` | 1:N | One user approves; approval is permanent |
 | `Project BELONGS_TO Workspace` | N:1 | Many projects per organization |
 | `LLMCallLog BELONGS_TO Project` | N:1 | Full cost trail per project |
+| `Specification HAS_MANY ExportArtifact` | 1:N | One spec version may produce multiple export formats |
+| `ExportArtifact RENDERED_FROM BRDTemplate` | N:1 | Many exports may share a template; only applies to `brd_*` types |
+| `ExportArtifact HAS_ONE ClientSignOff` | 1:0..1 | Only the artifact sent for sign-off carries a ClientSignOff record |
+| `ClientSignOff SIGNED_BY Stakeholder` | N:1 | The external client who formally approved the document |
 
 ---
 

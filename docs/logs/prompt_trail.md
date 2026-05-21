@@ -61,6 +61,12 @@
 **P-015**
 > for the orchestration framework make a configuration file which can select different types of orchestration connectors (for eg - langchain, transormers, together ai, crew ai any adk/sdk etc and the decisioning is at compile time or runtime. the decision should be based on the constraints on security, budget, client choices etc - this should be a fully configurable middleware later on. ensure this project gets logged to the prompt trail
 
+**P-016**
+> in the docs we also want to add to the relevant docs - the ability of the output to create a templated BRD or High Level Architecture Diagram which is signed off by the client eventually include this as well
+
+**P-017**
+> we want to redefine the docs in sprint0 - we dont want a doc sprawl reduce the docs to manageable numbers. Also we want to introduce a HITL state aware context for BAs to begin from problem defination and intent ingestion, where the BA is led through all phases of the project planning via active chat communications and uploads docs only at relevant checkpoints including other inputs. Lets remove the orchestration middleware for now and redo the docs again. log the prompt in the prompt registery and do it for all subsequent prompts in this project
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
