@@ -76,6 +76,9 @@
 **P-020**
 > the state transition in sprint1 has to have a acceptance criteria (eg. upload diagrams or architecture plans etc or client intent etc) ensure it is part of the sprint before we move on
 
+**P-021**
+> one last document the technical stack - my take build the state or dot machine in rust, the AI orchestrator or RAG in python and tthe APIs iin golang if this is fundamentally correct one more techstac doc in /architecture please and then we start coding. log the prompt
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
