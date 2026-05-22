@@ -100,6 +100,9 @@
 **P-028**
 > now create a /tests dir and write unit tests for the services/state-machine and ensure all the tests assert true or pass cover both positive and negative senarios include edge or boundary cases. Use appropriate test sub dirs for testing
 
+**P-029**
+> create a .github dir with a ci.yaml file for github actions only - passing criteria for now  is the unit or e2e tests if any then push to remote
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026

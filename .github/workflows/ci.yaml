@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Rust — state-machine kernel
+  # ─────────────────────────────────────────────────────────────────────────────
+  state-machine:
+    name: State Machine (Rust)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/state-machine
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/state-machine
+
+      - name: Format check
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Unit & integration tests
+        run: cargo test -p chitragupt-state-machine
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Python — AI / RAG orchestration  (enable when services/ai-orchestration exists)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ai-orchestration:
+  #   name: AI Orchestration (Python)
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/ai-orchestration
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.11"
+  #     - run: pip install uv && uv sync
+  #     - run: uv run mypy --strict .
+  #     - run: uv run pytest -q
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Go — API gateway  (enable when services/api-gateway exists)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # api-gateway:
+  #   name: API Gateway (Go)
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/api-gateway
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-go@v5
+  #       with:
+  #         go-version: "1.22"
+  #     - run: go vet ./...
+  #     - run: go test ./...
