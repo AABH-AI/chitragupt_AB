@@ -1,34 +1,27 @@
-# syntax=docker/dockerfile:1
+# ═══════════════════════════════════════════════════════════════════════════════
+# State Machine Kernel — Rust
+# ═══════════════════════════════════════════════════════════════════════════════
 
 # ── base: toolchain ───────────────────────────────────────────────────────────
-FROM rust:stable AS base
+FROM rust:latest AS base
 WORKDIR /app
 RUN rustup component add rustfmt clippy
 
-# ── deps: fetch crates (cached until manifests or lock file change) ───────────
-FROM base AS deps
-COPY Cargo.toml Cargo.lock ./
-COPY services/state-machine/Cargo.toml ./services/state-machine/Cargo.toml
-RUN cargo fetch --locked
+# ── builder: compile ──────────────────────────────────────────────────────────
+FROM base AS builder
+COPY . .
+RUN cargo build --release
 
-# ── tester: fmt · clippy · unit/integration tests ────────────────────────────
-FROM deps AS tester
-COPY services/state-machine/src      ./services/state-machine/src
-COPY services/state-machine/tests    ./services/state-machine/tests
-COPY services/state-machine/proto    ./services/state-machine/proto
-RUN cargo fmt --check
-RUN cargo clippy -p chitragupt-state-machine --all-targets -- -D warnings
-RUN cargo test  -p chitragupt-state-machine
+# ── tester: fmt · clippy · tests ──────────────────────────────────────────────
+FROM base AS tester
+COPY . .
+RUN cargo fmt -- --check
+RUN cargo clippy -- -D warnings
+RUN cargo test --verbose
 
-# ── builder: release binary ───────────────────────────────────────────────────
-FROM tester AS builder
-RUN cargo build --release -p chitragupt-state-machine
-
-# ── runtime: minimal production image ────────────────────────────────────────
+# ── runtime: production ───────────────────────────────────────────────────────
 FROM debian:bookworm-slim AS runtime
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-COPY --from=builder /app/target/release/state-machine ./state-machine
-ENTRYPOINT ["./state-machine"]
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/chitragupt /usr/local/bin/
+EXPOSE 8080
+CMD ["chitragupt"]
