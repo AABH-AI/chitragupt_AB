@@ -9,7 +9,7 @@ impl GateManager {
     }
 
     /// Returns all hard gates that are currently open for this session.
-    pub fn open_hard_gates<'a>(&self, state: &'a SessionState) -> Vec<UploadGate> {
+    pub fn open_hard_gates(&self, state: &SessionState) -> Vec<UploadGate> {
         self.all_gates_for_session(state)
             .into_iter()
             .filter(|g| g.gate_type == GateType::Hard && g.is_open)
