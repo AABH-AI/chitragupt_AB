@@ -118,6 +118,9 @@
 > error: target tuple in channel name 'stable-x86_64-pc-windows-gnu'
 > Error: Process completed with exit code 1. fix this ci error in ci
 
+**P-032**
+> error: use of `default` to create a unit struct … GateManager::default() … got this error again there is a dependency issue - lets make this docker first so that the githhub actions work without a issue - create the necessary docker files and then make changes to the ci accordingly ensure all test pass in docker and then push
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026

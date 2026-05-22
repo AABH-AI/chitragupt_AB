@@ -9,36 +9,26 @@ on:
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # Rust — state-machine kernel
+  # Runs inside Docker: fmt check → clippy → 188 unit/integration tests
   # ─────────────────────────────────────────────────────────────────────────────
   state-machine:
     name: State Machine (Rust)
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: services/state-machine
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build tester stage (fmt · clippy · tests)
+        uses: docker/build-push-action@v6
         with:
-          components: rustfmt, clippy
-
-      - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: services/state-machine
-
-      - name: Format check
-        run: cargo fmt --check
-
-      - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Unit & integration tests
-        run: cargo test -p chitragupt-state-machine
+          context: .
+          target: tester
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Python — AI / RAG orchestration  (enable when services/ai-orchestration exists)
@@ -46,17 +36,18 @@ jobs:
   # ai-orchestration:
   #   name: AI Orchestration (Python)
   #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/ai-orchestration
   #   steps:
   #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #     - name: Build tester stage
+  #       uses: docker/build-push-action@v6
   #       with:
-  #         python-version: "3.11"
-  #     - run: pip install uv && uv sync
-  #     - run: uv run mypy --strict .
-  #     - run: uv run pytest -q
+  #         context: services/ai-orchestration
+  #         target: tester
+  #         push: false
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Go — API gateway  (enable when services/api-gateway exists)
@@ -64,13 +55,15 @@ jobs:
   # api-gateway:
   #   name: API Gateway (Go)
   #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/api-gateway
   #   steps:
   #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-go@v5
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #     - name: Build tester stage
+  #       uses: docker/build-push-action@v6
   #       with:
-  #         go-version: "1.22"
-  #     - run: go vet ./...
-  #     - run: go test ./...
+  #         context: services/api-gateway
+  #         target: tester
+  #         push: false
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max

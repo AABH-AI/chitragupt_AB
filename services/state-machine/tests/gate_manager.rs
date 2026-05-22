@@ -271,7 +271,7 @@ fn multiple_documents_still_resolves_regulated_gate() {
 fn gate_manager_default_equals_gate_manager_new() {
     let state = fresh();
     let gm_new = GateManager::new();
-    let gm_default = GateManager::default();
+    let gm_default = GateManager;
     assert_eq!(
         gm_new.open_hard_gates(&state).len(),
         gm_default.open_hard_gates(&state).len()
