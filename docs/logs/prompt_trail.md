@@ -94,6 +94,12 @@
 **P-026**
 > wonderful now move the tech-docs in /docs also and then push to remote
 
+**P-027**
+> a small bio for the github remote please
+
+**P-028**
+> now create a /tests dir and write unit tests for the services/state-machine and ensure all the tests assert true or pass cover both positive and negative senarios include edge or boundary cases. Use appropriate test sub dirs for testing
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026

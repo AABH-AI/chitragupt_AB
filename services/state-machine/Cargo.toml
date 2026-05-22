@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["Revorion AI <kunal@revorion.ai>"]
 description = "Chitragupt state machine kernel — HITL session orchestration"
 
+[lib]
+name = "chitragupt_state_machine"
+path = "src/lib.rs"
+
 [[bin]]
 name = "state-machine"
 path = "src/main.rs"

@@ -1,15 +1,10 @@
-mod ac;
-mod error;
-mod gates;
-mod state;
-
 use tracing::info;
 use uuid::Uuid;
 
-use gates::manager::GateManager;
-use state::phase::SessionPhase;
-use state::session::SessionState;
-use state::transition::TransitionEngine;
+use chitragupt_state_machine::gates::manager::GateManager;
+use chitragupt_state_machine::state::phase::SessionPhase;
+use chitragupt_state_machine::state::session::SessionState;
+use chitragupt_state_machine::state::transition::TransitionEngine;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,7 +17,6 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Chitragupt state machine kernel starting");
 
-    // Smoke-test: create a fresh session and exercise the core types.
     let workspace_id = Uuid::new_v4();
     let project_id = Uuid::new_v4();
     let state = SessionState::new(workspace_id, project_id);
@@ -34,14 +28,12 @@ async fn main() -> anyhow::Result<()> {
         "new session created"
     );
 
-    // Show valid transitions from the initial phase.
     let transitions = state.current_phase.valid_transitions();
     info!(
         "valid transitions from {:?}: {:?}",
         state.current_phase, transitions
     );
 
-    // Evaluate AC for the current phase (all will be unmet on a fresh session).
     let ac_result = state.current_phase.evaluate_ac(&state);
     info!(
         met = ac_result.met_count(),
@@ -55,14 +47,12 @@ async fn main() -> anyhow::Result<()> {
         info!("first gap → {}", ac_result.gaps[0].suggested_question);
     }
 
-    // Show open gates (all hard gates open on fresh session).
     let open_gates = gate_manager.open_gates(&state);
     info!("{} gate(s) currently open", open_gates.len());
     for gate in &open_gates {
         info!("  [{:?}] {} — open: {}", gate.gate_type, gate.id, gate.is_open);
     }
 
-    // Attempt transition (will fail — AC not met, hard gates open).
     match TransitionEngine::attempt(&state, SessionPhase::StakeholderDiscovery, &gate_manager) {
         Ok(()) => info!("transition approved (unexpected on fresh session)"),
         Err(e) => info!("transition blocked as expected: {}", e),
