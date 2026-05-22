@@ -20,18 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build tester stage (fmt · clippy · tests)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          target: tester
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          progress: plain
+        run: docker build --target tester .
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Python — AI / RAG orchestration  (enable when services/ai-orchestration exists)
