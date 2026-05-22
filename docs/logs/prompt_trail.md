@@ -88,6 +88,12 @@
 **P-024**
 > let us begin with a simple project scaffolding - I have a local rust toolchain on my local machine - we build the rust kernel only for now nothing else with required files and stubs only, tools, cargo dependencies etc and ensure minimal build works - if this is not part of sprint1 make it. log the prompt and start
 
+**P-025**
+> now it is important to move sprint0 and 1 into the /docs folder and reflect our new choices - lets not overdo sprint0 which can have basic discovery and documentation tasks. Also now we need another folder called /tech-docs with detailed explaination of how our state machine works. Clean up the repo and especially docs to reflect all this - also introduce a contributing.md and a license.md, make the readme professional
+
+**P-026**
+> wonderful now move the tech-docs in /docs also and then push to remote
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
