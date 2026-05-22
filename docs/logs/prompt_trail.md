@@ -103,6 +103,18 @@
 **P-029**
 > create a .github dir with a ci.yaml file for github actions only - passing criteria for now  is the unit or e2e tests if any then push to remote
 
+**P-030**
+> Run cargo fmt --check
+>   cargo fmt --check
+>   shell: /usr/bin/bash -e {0}
+>   env:
+>     CARGO_HOME: /home/runner/.cargo
+>     CARGO_INCREMENTAL: 0
+>     CARGO_TERM_COLOR: always
+>     CACHE_ON_FAILURE: false
+> error: target tuple in channel name 'stable-x86_64-pc-windows-gnu'
+> Error: Process completed with exit code 1. fix this ci error in ci
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
