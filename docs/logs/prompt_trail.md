@@ -103,6 +103,9 @@
 **P-029**
 > create a .github dir with a ci.yaml file for github actions only - passing criteria for now  is the unit or e2e tests if any then push to remote
 
+**P-031**
+> [fmt diff from CI — cargo fmt --check failures across error.rs, manager.rs, main.rs, and test files]. fix this issue
+
 **P-030**
 > Run cargo fmt --check
 >   cargo fmt --check

@@ -7,7 +7,10 @@ use crate::state::phase::SessionPhase;
 #[allow(dead_code)]
 pub enum StateError {
     #[error("invalid transition: {from:?} → {to:?}")]
-    InvalidTransition { from: SessionPhase, to: SessionPhase },
+    InvalidTransition {
+        from: SessionPhase,
+        to: SessionPhase,
+    },
 
     #[error("transition blocked by {gate_count} open hard gate(s)")]
     HardGateBlocking { gate_count: usize },

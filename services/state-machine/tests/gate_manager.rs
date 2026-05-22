@@ -54,7 +54,10 @@ fn fresh_session_open_gates_matches_open_hard_gates() {
     // All defined gates are Hard type, so open_gates() and open_hard_gates() return the same set
     let state = fresh();
     let gm = GateManager::new();
-    assert_eq!(gm.open_gates(&state).len(), gm.open_hard_gates(&state).len());
+    assert_eq!(
+        gm.open_gates(&state).len(),
+        gm.open_hard_gates(&state).len()
+    );
 }
 
 #[test]
@@ -223,7 +226,11 @@ fn open_hard_gates_all_have_non_empty_resolution_prompts() {
 fn all_open_hard_gates_report_is_open_true() {
     let state = fresh();
     for gate in GateManager::new().open_hard_gates(&state) {
-        assert!(gate.is_open, "gate {} is in open_hard_gates but is_open = false", gate.id);
+        assert!(
+            gate.is_open,
+            "gate {} is in open_hard_gates but is_open = false",
+            gate.id
+        );
     }
 }
 
@@ -299,11 +306,29 @@ fn regulated_gate_requires_both_context_and_no_documents_to_open() {
     state_both.documents_indexed.push(Uuid::new_v4());
 
     let gm = GateManager::new();
-    let open_context = gm.open_hard_gates(&state_context_only).iter().any(|g| g.id == "GATE-REGULATED-SOURCE-DOC");
-    let open_docs = gm.open_hard_gates(&state_docs_only).iter().any(|g| g.id == "GATE-REGULATED-SOURCE-DOC");
-    let open_both = gm.open_hard_gates(&state_both).iter().any(|g| g.id == "GATE-REGULATED-SOURCE-DOC");
+    let open_context = gm
+        .open_hard_gates(&state_context_only)
+        .iter()
+        .any(|g| g.id == "GATE-REGULATED-SOURCE-DOC");
+    let open_docs = gm
+        .open_hard_gates(&state_docs_only)
+        .iter()
+        .any(|g| g.id == "GATE-REGULATED-SOURCE-DOC");
+    let open_both = gm
+        .open_hard_gates(&state_both)
+        .iter()
+        .any(|g| g.id == "GATE-REGULATED-SOURCE-DOC");
 
-    assert!(open_context, "gate should open with context and no documents");
-    assert!(!open_docs, "gate should not open with documents but no context");
-    assert!(!open_both, "gate should close when both context and documents are present");
+    assert!(
+        open_context,
+        "gate should open with context and no documents"
+    );
+    assert!(
+        !open_docs,
+        "gate should not open with documents but no context"
+    );
+    assert!(
+        !open_both,
+        "gate should close when both context and documents are present"
+    );
 }

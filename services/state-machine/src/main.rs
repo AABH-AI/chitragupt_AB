@@ -50,7 +50,10 @@ async fn main() -> anyhow::Result<()> {
     let open_gates = gate_manager.open_gates(&state);
     info!("{} gate(s) currently open", open_gates.len());
     for gate in &open_gates {
-        info!("  [{:?}] {} — open: {}", gate.gate_type, gate.id, gate.is_open);
+        info!(
+            "  [{:?}] {} — open: {}",
+            gate.gate_type, gate.id, gate.is_open
+        );
     }
 
     match TransitionEngine::attempt(&state, SessionPhase::StakeholderDiscovery, &gate_manager) {

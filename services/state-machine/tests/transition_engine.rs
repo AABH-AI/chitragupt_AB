@@ -189,11 +189,26 @@ fn hard_gates_block_every_transition_not_just_final() {
     // on a fresh session until BRD, HLD, and signature are resolved.
     let gm = GateManager::new();
     let transitions = [
-        (SessionPhase::ProblemIntake, SessionPhase::StakeholderDiscovery),
-        (SessionPhase::StakeholderDiscovery, SessionPhase::RequirementElicitation),
-        (SessionPhase::RequirementElicitation, SessionPhase::ConstraintCapture),
-        (SessionPhase::ConstraintCapture, SessionPhase::ArchitectureAlignment),
-        (SessionPhase::ArchitectureAlignment, SessionPhase::ReviewAndSignOff),
+        (
+            SessionPhase::ProblemIntake,
+            SessionPhase::StakeholderDiscovery,
+        ),
+        (
+            SessionPhase::StakeholderDiscovery,
+            SessionPhase::RequirementElicitation,
+        ),
+        (
+            SessionPhase::RequirementElicitation,
+            SessionPhase::ConstraintCapture,
+        ),
+        (
+            SessionPhase::ConstraintCapture,
+            SessionPhase::ArchitectureAlignment,
+        ),
+        (
+            SessionPhase::ArchitectureAlignment,
+            SessionPhase::ReviewAndSignOff,
+        ),
         (SessionPhase::ReviewAndSignOff, SessionPhase::SignedOff),
     ];
     for (from, to) in transitions {
@@ -238,8 +253,7 @@ fn problem_intake_to_stakeholder_discovery_blocked_by_unmet_ac() {
 #[test]
 fn stakeholder_discovery_to_requirement_elicitation_blocked_by_unmet_ac() {
     let (state, gm) = in_phase_gates_resolved(SessionPhase::StakeholderDiscovery);
-    let result =
-        TransitionEngine::attempt(&state, SessionPhase::RequirementElicitation, &gm);
+    let result = TransitionEngine::attempt(&state, SessionPhase::RequirementElicitation, &gm);
     assert!(matches!(result, Err(StateError::AcNotMet { .. })));
 }
 
@@ -303,7 +317,10 @@ fn state_error_implements_display() {
     let result = TransitionEngine::attempt(&state, SessionPhase::SignedOff, &gm);
     if let Err(e) = result {
         let msg = e.to_string();
-        assert!(!msg.is_empty(), "StateError Display should produce a non-empty string");
+        assert!(
+            !msg.is_empty(),
+            "StateError Display should produce a non-empty string"
+        );
     }
 }
 

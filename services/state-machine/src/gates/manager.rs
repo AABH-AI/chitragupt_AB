@@ -49,8 +49,11 @@ impl GateManager {
         gates.push(UploadGate {
             id: "GATE-CLIENT-SIGNATURE".to_string(),
             gate_type: GateType::Hard,
-            description: "Client signature is required before the project is signed off".to_string(),
-            resolution_prompt: "We're waiting for the client signature. Who at the client side will be signing?".to_string(),
+            description: "Client signature is required before the project is signed off"
+                .to_string(),
+            resolution_prompt:
+                "We're waiting for the client signature. Who at the client side will be signing?"
+                    .to_string(),
             is_open: !state.client_signature_confirmed,
         });
 

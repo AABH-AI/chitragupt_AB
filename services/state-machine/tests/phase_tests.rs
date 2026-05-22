@@ -25,7 +25,10 @@ fn problem_intake_advances_to_stakeholder_discovery() {
 
 #[test]
 fn stakeholder_discovery_has_exactly_one_valid_transition() {
-    assert_eq!(SessionPhase::StakeholderDiscovery.valid_transitions().len(), 1);
+    assert_eq!(
+        SessionPhase::StakeholderDiscovery.valid_transitions().len(),
+        1
+    );
 }
 
 #[test]
@@ -297,13 +300,21 @@ fn all_display_names_are_distinct() {
 #[test]
 fn evaluate_ac_for_problem_intake_is_not_transition_ready() {
     let state = fresh_state();
-    assert!(!SessionPhase::ProblemIntake.evaluate_ac(&state).transition_ready);
+    assert!(
+        !SessionPhase::ProblemIntake
+            .evaluate_ac(&state)
+            .transition_ready
+    );
 }
 
 #[test]
 fn evaluate_ac_for_stakeholder_discovery_is_not_transition_ready() {
     let state = fresh_state();
-    assert!(!SessionPhase::StakeholderDiscovery.evaluate_ac(&state).transition_ready);
+    assert!(
+        !SessionPhase::StakeholderDiscovery
+            .evaluate_ac(&state)
+            .transition_ready
+    );
 }
 
 #[test]
@@ -341,8 +352,14 @@ fn session_phase_equality_is_reflexive() {
 
 #[test]
 fn different_phases_are_not_equal() {
-    assert_ne!(SessionPhase::ProblemIntake, SessionPhase::StakeholderDiscovery);
-    assert_ne!(SessionPhase::RequirementElicitation, SessionPhase::ConstraintCapture);
+    assert_ne!(
+        SessionPhase::ProblemIntake,
+        SessionPhase::StakeholderDiscovery
+    );
+    assert_ne!(
+        SessionPhase::RequirementElicitation,
+        SessionPhase::ConstraintCapture
+    );
     assert_ne!(SessionPhase::ArchitectureAlignment, SessionPhase::SignedOff);
 }
 

@@ -26,7 +26,11 @@ fn assert_gaps_match_unmet_criteria(result: &AcResult) {
         .filter(|c| c.status == AcStatus::Unmet)
         .map(|c| c.id.as_str())
         .collect();
-    let gap_ids: Vec<&str> = result.gaps.iter().map(|g| g.criterion_id.as_str()).collect();
+    let gap_ids: Vec<&str> = result
+        .gaps
+        .iter()
+        .map(|g| g.criterion_id.as_str())
+        .collect();
     assert_eq!(
         unmet_ids, gap_ids,
         "gaps must correspond to unmet criteria in order"
@@ -137,7 +141,11 @@ fn s2_criterion_ids_have_ac_s2_prefix() {
 #[test]
 fn s2_gaps_have_non_empty_suggested_questions() {
     for g in s2::evaluate(&fresh()).gaps {
-        assert!(!g.suggested_question.is_empty(), "{} has empty question", g.criterion_id);
+        assert!(
+            !g.suggested_question.is_empty(),
+            "{} has empty question",
+            g.criterion_id
+        );
     }
 }
 
@@ -180,7 +188,11 @@ fn s3_criterion_ids_have_ac_s3_prefix() {
 #[test]
 fn s3_gaps_have_non_empty_suggested_questions() {
     for g in s3::evaluate(&fresh()).gaps {
-        assert!(!g.suggested_question.is_empty(), "{} has empty question", g.criterion_id);
+        assert!(
+            !g.suggested_question.is_empty(),
+            "{} has empty question",
+            g.criterion_id
+        );
     }
 }
 
@@ -223,7 +235,11 @@ fn s4_criterion_ids_have_ac_s4_prefix() {
 #[test]
 fn s4_gaps_have_non_empty_suggested_questions() {
     for g in s4::evaluate(&fresh()).gaps {
-        assert!(!g.suggested_question.is_empty(), "{} has empty question", g.criterion_id);
+        assert!(
+            !g.suggested_question.is_empty(),
+            "{} has empty question",
+            g.criterion_id
+        );
     }
 }
 
@@ -266,7 +282,11 @@ fn s5_criterion_ids_have_ac_s5_prefix() {
 #[test]
 fn s5_gaps_have_non_empty_suggested_questions() {
     for g in s5::evaluate(&fresh()).gaps {
-        assert!(!g.suggested_question.is_empty(), "{} has empty question", g.criterion_id);
+        assert!(
+            !g.suggested_question.is_empty(),
+            "{} has empty question",
+            g.criterion_id
+        );
     }
 }
 
@@ -309,7 +329,11 @@ fn s6_criterion_ids_have_ac_s6_prefix() {
 #[test]
 fn s6_gaps_have_non_empty_suggested_questions() {
     for g in s6::evaluate(&fresh()).gaps {
-        assert!(!g.suggested_question.is_empty(), "{} has empty question", g.criterion_id);
+        assert!(
+            !g.suggested_question.is_empty(),
+            "{} has empty question",
+            g.criterion_id
+        );
     }
 }
 
@@ -358,7 +382,11 @@ fn all_unmet_is_never_transition_ready() {
             })
             .collect();
         let result = AcResult::all_unmet(input);
-        assert!(!result.transition_ready, "all_unmet with {} criteria should not be ready", count);
+        assert!(
+            !result.transition_ready,
+            "all_unmet with {} criteria should not be ready",
+            count
+        );
     }
 }
 
@@ -385,7 +413,10 @@ fn all_phases_produce_non_empty_criteria_lists() {
         s6::evaluate(&state).criteria.len(),
     ];
     for count in counts {
-        assert!(count > 0, "all active phases must have at least one criterion");
+        assert!(
+            count > 0,
+            "all active phases must have at least one criterion"
+        );
     }
 }
 
@@ -406,5 +437,9 @@ fn criterion_ids_across_all_phases_are_globally_unique() {
         }
     }
     let unique: std::collections::HashSet<&str> = all_ids.iter().map(String::as_str).collect();
-    assert_eq!(all_ids.len(), unique.len(), "duplicate criterion ID found across phases");
+    assert_eq!(
+        all_ids.len(),
+        unique.len(),
+        "duplicate criterion ID found across phases"
+    );
 }
